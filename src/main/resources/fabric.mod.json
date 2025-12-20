@@ -1,0 +1,41 @@
+{
+	"schemaVersion": 1,
+	"id": "screenshot-manager",
+	"version": "${version}",
+	"name": "Screenshot Manager",
+	"description": "This mod is to manage where screenshots are saved on a per-world basis. This mod will work with solo worlds or multiplayer servers",
+	"authors": [
+		"scriptmunkee"
+	],
+	"contact": {
+		"homepage": "https://fabricmc.net/",
+		"sources": "https://github.com/scriptmunkeeofficial/screenshot-manager"
+	},
+	"license": "CC0-1.0",
+	"icon": "assets/screenshot-manager/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"com.milezerosoftware.mc.ScreenshotManager"
+		],
+		"client": [
+			"com.milezerosoftware.mc.ScreenshotManagerClient"
+		]
+	},
+	"mixins": [
+		"screenshot-manager.mixins.json",
+		{
+			"config": "screenshot-manager.client.mixins.json",
+			"environment": "client"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=0.17.3",
+		"minecraft": "~1.21.10",
+		"java": ">=21",
+		"fabric-api": "*"
+	},
+	"suggests": {
+		"another-mod": "*"
+	}
+}
