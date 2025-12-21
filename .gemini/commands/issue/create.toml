@@ -1,0 +1,52 @@
+description = "Creates a GitHub issue using the gh CLI and predefined templates."
+prompt = """You are tasked with creating a GitHub issue. Your goal is to gather the necessary information from the user, select the appropriate template, and construct and execute a `gh` command to create the issue.
+
+## Your Mission
+
+Create a GitHub issue based on the user's request:
+
+`{{args}}`
+
+## Core Constraints
+
+1.  **Interpret Input:** You **MUST** first determine the issue type ("bug", "task", or "feature") and suggest a title based on the user's input.
+2.  **Pre-populate Template:** You **MUST** use the content of the corresponding issue template and pre-populate it with any information that can be inferred from the user's request.
+    *   For bugs, use `.github/ISSUE_TEMPLATE/bug_report.md`.
+    *   For tasks, use `.github/ISSUE_TEMPLATE/developer_task.md`.
+    *   For features, use `.github/ISSUE_TEMPLATE/feature_request.md`.
+3.  **Gather Information:** You **MUST** go through the template section by section, asking the user for any missing information.
+4.  **Spell Check:** You **MUST** perform a spell check on all user-provided text.
+5.  **Use a Temp File:** You **MUST** write the final issue body to a temporary file within a `tmp/` directory in the project and use the `--body-file` argument for the `gh` command. You do not need to ask for permission to create or delete this file; it is part of the process.
+6.  **Approval:** You are **STRICTLY FORBIDDEN** from running the `gh` command directly. You **MUST** show the complete command to the user and ask for their approval before executing it.
+7.  **Confirmation:** After successful creation, you **MUST** respond with a fun message, emojis, the issue number, and a link to the new issue.
+
+## Your Process
+
+### 1. Interpretation and Pre-population Phase
+- Analyze the user's request to determine the issue type (bug/task/feature).
+- Propose a title for the issue based on the request.
+- Read the appropriate issue template based on the issue type.
+- Pre-populate the template with any details available from the user's initial request.
+
+### 2. Information Gathering Phase
+- Present the proposed title and the pre-populated template to the user.
+- Go through each remaining empty section of the template one by one, asking for information.
+- Clearly state that the user can say "next" or "skip" to move to the next section.
+- When asking about "Screenshots & Recordings", inform the user: "Note: Attachments must be manually uploaded to the GitHub issue after creation."
+
+### 3. Command Approval and Execution Phase
+- Once all information is gathered, perform a spell check on the user-provided input.
+- **From the populated template, you MUST remove the YAML frontmatter (the entire section between and including the `---` markers at the top).**
+- Construct the final `gh issue create --title "..." --label "..." --body-file ...` command using the content *without* the frontmatter.
+- **Show this single command to the user for approval.** When you do, you **MUST** also explain that upon approval, you will first save the issue's content (without the frontmatter) to a temporary file, run the command, and then delete the file.
+- **Upon approval:**
+    1.  Ensure a `tmp/` directory exists.
+    2.  Write the full, spell-checked issue body (without the frontmatter) to a temporary file (e.g., `tmp/issue-body.tmp.md`).
+    3.  Execute the approved `gh issue create` command.
+    4.  If the command is successful, parse the output to find the issue URL.
+    5.  Delete the temporary file.
+    6.  Respond with a fun confirmation message, including emojis and the issue URL in the format "Issue: {URL}".
+        - **If the "Screenshots & Recordings" section was present in the template and the user skipped providing content for it, then also prompt the user: "Would you like me to open the issue in your browser so you can attach screenshots? (yes/no)"**
+            - **If the user responds "yes", execute a command to open the URL in the browser.**
+
+"""

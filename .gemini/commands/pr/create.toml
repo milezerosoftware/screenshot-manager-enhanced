@@ -1,0 +1,54 @@
+description = "Creates a GitHub pull request using the gh CLI and a predefined template."
+prompt = """You are tasked with creating a GitHub pull request. Your goal is to gather the necessary information from the current git branch, its changes, and the user, then format it using the project's pull request template, and finally, construct and execute a `gh` command to create the PR.
+
+## Your Mission
+
+Create a GitHub pull request based on the current branch's changes.
+
+`{{args}}`
+
+## Core Constraints
+
+1.  **Analyze Git State:** You **MUST** first analyze the current git branch to pre-populate the pull request.
+    *   Get the current branch name.
+    *   Examine the commit history and file changes between this branch and the main branch (`main` or `master`).
+    *   Attempt to derive the related issue number from the branch name (e.g., a branch named `feature/123-new-feature` relates to issue #123).
+2.  **Determine Title:** You **MUST** propose a pull request title that follows the convention: `type: brief description` (e.g., `feat: implement user authentication`). The `type` should be inferred from the branch name or the nature of the changes (e.g., `feat`, `fix`, `docs`, `refactor`, `test`).
+3.  **Pre-populate Template:** You **MUST** use the content of the `.github/pull_request_template.md` file and pre-populate it with information derived from your git analysis.
+    *   **Related Issue:** Link to the issue you identified.
+    *   **What's in this Pull Request?:** Create a high-level summary of the changes.
+    *   **Technical Details:** List the files that have been added, modified, or removed.
+4.  **Gather Information:** If you cannot derive all the necessary information to fill the template, you **MUST** go through the template section by section, asking the user for any missing details.
+5.  **Spell Check:** You **MUST** perform a spell check on all user-provided and generated text before creating the PR.
+6.  **Use a Temp File:** You **MUST** write the final pull request body to a temporary file within the `tmp/` directory and use the `--body-file` argument for the `gh` command. You do not need to ask for permission to create or delete this file.
+7.  **Approval:** You are **STRICTLY FORBIDDEN** from running the `gh` command directly. You **MUST** show the complete command to the user and ask for their approval before executing it.
+8.  **Confirmation:** After successful creation, you **MUST** respond with a confirmation message, the PR number, and a link to the new pull request.
+
+## Your Process
+
+### 1. Analysis and Pre-population Phase
+- Execute git commands (`git branch --show-current`, `git diff main...`, `git log main..HEAD`) to understand the changes.
+- Propose a title for the pull request.
+- Read the `.github/pull_request_template.md` file.
+- Pre-populate the template with details from your analysis (related issue, summary of changes, file list).
+
+### 2. Information Gathering Phase
+- Present the proposed title and the pre-populated template to the user.
+- For any empty sections (like "How to Test These Changes"), ask the user for the required information.
+- **When prompting the user for input for a section, you MUST also show them the example text or instructions for that section from the template to provide context.**
+- Clearly state that the user can say "next" or "skip" to move to the next section.
+- When asking about "Screenshots & Recordings", inform the user: "Note: Attachments must be manually uploaded to the GitHub pull request after creation."
+
+### 3. Command Approval and Execution Phase
+- Once all information is gathered, perform a spell check.
+- **From the populated template, you MUST remove the YAML frontmatter (the entire section between and including the `---` markers at the top).**
+- Construct the final `gh pr create --title "..." --body-file ...` command.
+- **Show this single command to the user for approval.** When you do, you **MUST** also explain that upon approval, you will first save the PR body (without the frontmatter) to a temporary file, run the command, and then delete the file.
+- **Upon approval:**
+    1.  Ensure a `tmp/` directory exists by running `mkdir -p tmp/`. This command will create the directory if it does not exist and do nothing if it does.
+    2.  Write the full, spell-checked PR body (without the frontmatter) to a temporary file (e.g., `tmp/pr-body.tmp.md`).
+    3.  Execute the approved `gh pr create` command.
+    4.  If the command is successful, parse the output to find the PR URL.
+    5.  Delete the temporary file.
+    6.  Respond with a confirmation message and the PR URL in the format "Pull Request: {URL}".
+"""
