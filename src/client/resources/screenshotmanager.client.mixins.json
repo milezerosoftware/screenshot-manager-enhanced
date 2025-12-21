@@ -1,0 +1,14 @@
+{
+  "required": true,
+  "package": "com.milezerosoftware.mc.client.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "ScreenshotRecorderMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "mixins": [
+    "ScreenshotRecorderMixin"
+  ]
+}
