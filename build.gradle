@@ -3,7 +3,29 @@ plugins {
 	id 'maven-publish'
 }
 
-version = project.mod_version
+def getVersionSuffix() {
+	// CI Environment
+	if (System.getenv("GITHUB_ACTIONS")) {
+		if (System.getenv("GITHUB_REF") == "refs/heads/main") {
+			return ""
+		}
+		return "-SNAPSHOT"
+	}
+
+	// Local Environment
+	try {
+		def process = "git rev-parse --abbrev-ref HEAD".execute()
+		process.waitFor()
+		if (process.exitValue() == 0) {
+			def branch = process.text.trim()
+			if (branch == "main") return ""
+		}
+	} catch (Exception ignored) {}
+
+	return "-SNAPSHOT"
+}
+
+version = project.mod_version + getVersionSuffix()
 group = project.maven_group
 
 base {
