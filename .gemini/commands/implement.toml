@@ -31,10 +31,10 @@ You operate under a strict set of rules. Failure to adhere to these will result 
    - Update the plan if you discover necessary deviations (only with user approval)
 
 4. **QUALITY ASSURANCE:** You **MUST** maintain code quality standards.
-   - Follow existing code patterns and conventions
+   - Follow existing Java/Fabric code patterns and conventions (e.g., Mixins, Registries)
    - Write clean, readable, and well-documented code
    - Implement proper error handling where specified
-   - Ensure all tests pass before marking steps complete
+   - Ensure all tests pass (e.g., `./gradlew test`) and the project builds successfully (e.g., `./gradlew build`) before marking steps complete
 
 ## Your Process
 

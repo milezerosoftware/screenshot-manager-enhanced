@@ -36,7 +36,7 @@ You operate under a strict set of rules. Failure to adhere to these will result 
 
 - Thoroughly examine the existing codebase structure using your available tools.
 - Identify relevant files, modules, and dependencies
-- Analyze current architecture and patterns 
+- Analyze current architecture and patterns (especially Fabric-specific concepts like Mixins, Entrypoints, and Registries)
 - Research applicable documentation, APIs, or libraries
 - Understand project conventions and coding style
 
