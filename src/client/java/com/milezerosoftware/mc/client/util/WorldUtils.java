@@ -16,9 +16,10 @@ public class WorldUtils {
      * Gets a unique identifier for the current game world.
      *
      * <ul>
-     *     <li>For single-player worlds, this is the folder name of the world save.</li>
-     *     <li>For multiplayer servers, this is the server's IP address.</li>
-     *     <li>If the client is not in a world (e.g., on the main menu), it returns "MENU".</li>
+     * <li>For single-player worlds, this is the folder name of the world save.</li>
+     * <li>For multiplayer servers, this is the server's IP address.</li>
+     * <li>If the client is not in a world (e.g., on the main menu), it returns
+     * "MENU".</li>
      * </ul>
      *
      * @return A {@link String} representing the world's unique identifier.
@@ -32,27 +33,21 @@ public class WorldUtils {
         if (client.isInSingleplayer()) {
             IntegratedServer server = client.getServer();
             if (server != null) {
-                return server.getSavePath(WorldSavePath.ROOT).getParent().getFileName().toString();
+                // Returns the folder name of the world
+                return server.getSavePath(WorldSavePath.ROOT).getFileName().toString();
             }
-        } else {
+        } else if (client.getNetworkHandler() != null && client.getNetworkHandler().getConnection() != null) {
             InetSocketAddress address = (InetSocketAddress) client.getNetworkHandler().getConnection().getAddress();
             if (address != null) {
                 return address.getHostString();
             }
         }
 
-        // Fallback for edge cases where server/address info is not available
         return "UNKNOWN";
     }
 
     /**
      * Gets the display name of the current world.
-     *
-     * <ul>
-     *     <li>For single-player worlds, it's typically the same as the world ID.</li>
-     *     <li>For multiplayer servers, this could be the MOTD or a custom name.</li>
-     *     <li>If not in a world, returns "MENU".</li>
-     * </ul>
      *
      * @return A {@link String} representing the world's display name.
      */
@@ -62,29 +57,26 @@ public class WorldUtils {
             return "MENU";
         }
 
-        // For multiplayer, the server name from the multiplayer screen is a good option.
+        if (client.isInSingleplayer() && client.getServer() != null) {
+            return client.getServer().getSaveProperties().getLevelName();
+        }
+
         if (!client.isInSingleplayer() && client.getCurrentServerEntry() != null) {
             return client.getCurrentServerEntry().name;
         }
 
-        // For single-player, the level name is the most reliable.
-        if (client.isInSingleplayer() && client.getServer() != null) {
-            return client.getServer().getSavePath(WorldSavePath.ROOT).getParent().getFileName().toString();
-        }
-
-        // A final fallback if other methods fail.
         return "UNKNOWN";
     }
 
     /**
      * Gets the identifier of the current dimension.
      *
-     * @return A {@link String} such as "minecraft:overworld", or "UNKNOWN" if not in a world.
+     * @return A {@link String} such as "minecraft:overworld", or "UNKNOWN".
      */
     @NotNull
     public static String getDimension() {
         if (client.world != null) {
-            return client.world.getDimension().effects().toString();
+            return client.world.getRegistryKey().getValue().toString();
         }
         return "UNKNOWN";
     }
@@ -92,7 +84,7 @@ public class WorldUtils {
     /**
      * Calculates the number of in-game days played in the current world.
      *
-     * @return The number of days as a {@code long}, or 0 if not in a world.
+     * @return The number of days as a {@code long}, or 0.
      */
     public static long getDaysPlayed() {
         if (client.world != null) {
@@ -104,12 +96,13 @@ public class WorldUtils {
     /**
      * Gets the current game difficulty.
      *
-     * @return A {@link String} representing the difficulty (e.g., "Peaceful", "Hard"), or "UNKNOWN".
+     * @return A {@link String} (e.g., "Peaceful", "Hard"), or "UNKNOWN".
      */
     @NotNull
     public static String getDifficulty() {
         if (client.world != null) {
-            return client.world.getDifficulty().getName();
+            String name = client.world.getDifficulty().getName();
+            return name.substring(0, 1).toUpperCase() + name.substring(1);
         }
         return "UNKNOWN";
     }
@@ -121,18 +114,19 @@ public class WorldUtils {
      */
     @NotNull
     public static String getVersion() {
-        return MinecraftClient.getInstance().getGameVersion();
+        return client.getGameVersion();
     }
 
     /**
      * Gets the current player's game mode.
      *
-     * @return A {@link String} (e.g., "Survival", "Creative"), or "UNKNOWN" if not available.
+     * @return A {@link String} (e.g., "Survival", "Creative"), or "UNKNOWN".
      */
     @NotNull
     public static String getGameMode() {
-        if (client.interactionManager != null) {
-            return client.interactionManager.getCurrentGameMode().name();
+        if (client.interactionManager != null && client.interactionManager.getCurrentGameMode() != null) {
+            String name = client.interactionManager.getCurrentGameMode().name().toLowerCase();
+            return name.substring(0, 1).toUpperCase() + name.substring(1);
         }
         return "UNKNOWN";
     }
