@@ -46,6 +46,22 @@ The project uses the standard Gradle wrapper.
   ./gradlew genSources
   ```
 
+## Testing
+
+The project uses **JUnit 5** for unit testing.
+
+* **Run Tests:**
+  ```bash
+  ./gradlew test
+  ```
+
+### Unit Testing Guidance
+
+* **Minecraft Coupling:** Avoid direct interaction with Minecraft classes (e.g., `MinecraftClient`, `World`) in unit tests as they require a full game environment.
+* **Decoupling:** Focus on testing logic that can be decoupled from Minecraft/Fabric specific APIs.
+* **Mocks:** Use lightweight mocks to isolate logic from the game environment when necessary.
+* **Prioritization:** Prioritize testing for utility classes, configuration logic, and data models.
+
 ## Dependencies
 
 Defined in `build.gradle`:
