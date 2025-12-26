@@ -8,6 +8,16 @@ Resolve the GitHub issue: `{{args}}` (This argument is expected to be a GitHub i
 ## Core Constraints
 
 1.  **READ-ONLY MANDATE (Except for Plan Creation):** You are **STRICTLY FORBIDDEN** from making any modifications to the codebase or the system, **with the single exception of creating the implementation plan file.** This includes:
+
+
+
+
+
+
+
+
+
+
     *   Editing, creating, or deleting any files other than the designated plan file.
     *   Running any shell commands that cause side effects (e.g., `git commit`, `npm install`, `mkdir`, `touch`), except for `gh issue view` to fetch issue details and commands necessary to create the plan file.
     *   Altering configurations or installing packages.
@@ -33,12 +43,13 @@ Resolve the GitHub issue: `{{args}}` (This argument is expected to be a GitHub i
 -   **Fetch Issue Details**: Use `gh issue view <issue_identifier> --json title,body,comments,url`.
 -   **Extract Information**: From the `gh` command output, extract the `title`, `body`, `url`, and `issue_number` (if not already directly available from `issue_identifier`).
 -   **Summarize Issue**: Based on the fetched details, provide a concise summary of the problem and its scope.
--   **Determine Affected Area(s)**: Analyze the issue's `title`, `body`, and `comments` to deterministically identify the primary area(s) of the codebase affected. Categorize the issue as one or more of the following: "Frontend", "Backend", "Data", or "Full Stack".
-    -   To improve accuracy, you should first inspect the project's dependency files (e.g., `package.json`, `requirements.txt`, `pom.xml`, `build.gradle`) to identify the specific technologies used.
-    -   **Frontend**: Look for general keywords like "UI", "UX", "component", "page", "styling", "user interface", "browser", "client-side", "CSS", "JavaScript", "TypeScript", as well as project-specific frontend libraries you identified.
-    -   **Backend**: Look for general keywords like "API", "server", "endpoint", "authentication", "middleware", "server-side logic", "route", "controller", "service", as well as project-specific backend frameworks you identified.
-    -   **Data**: Look for general keywords like "database", "schema", "migration", "query", "data model", "data integrity", "ORM", "DB", as well as project-specific database technologies you identified.
-    -   **Full Stack**: If keywords from multiple categories are present, or if the issue description explicitly mentions "full stack" or implies changes across layers. If no specific keywords are found, default to "Full Stack" as a comprehensive approach.
+-   **Determine Affected Area(s)**: Analyze the issue's `title`, `body`, and `comments` to deterministically identify the primary area(s) of the codebase affected. Categorize the issue as one or more of the following: "Client", "Server", "Common", or "Assets/Data".
+    -   To improve accuracy, you should first inspect the project's dependency and metadata files (e.g., `build.gradle`, `gradle.properties`, `fabric.mod.json`) to identify the specific technologies and Minecraft version used.
+    -   **Client**: Look for keywords like "UI", "HUD", "Screen", "Renderer", "Mixin (client)", "Texture", "Sound", "Screenshot", as well as client-only entry points.
+    -   **Server**: Look for keywords like "Command", "WorldGen", "Entity Logic", "Packet Handling", "Persistence", "Server-side", "Dedicated Server".
+    -   **Common**: Look for keywords like "Block", "Item", "Registry", "Networking", "Config", "Utility", as well as code shared between client and server.
+    -   **Assets/Data**: Look for keywords like "JSON", "Recipes", "Loot Tables", "Tags", "Models", "Translations", "Lang", "Resource Pack", "Data Pack".
+    -   **Cross-Side**: If keywords from multiple categories are present, or if the issue description implies changes across client and server. Default to "Common" if unsure.
 
 ### 2. Plan Formulation Phase
 -   **Draft Implementation Plan**: Create a detailed Markdown plan. This plan should be structured as follows:
@@ -53,7 +64,7 @@ Resolve the GitHub issue: `{{args}}` (This argument is expected to be a GitHub i
     [A concise summary of the issue, its impact, and the desired outcome, based on the issue body and comments.]
 
     ## Affected Codebase Areas
-    [Determined affected area(s): Frontend, Backend, Data, Full Stack. Based on the analysis in the "Determine Affected Area(s)" step.]
+    [Determined affected area(s): Client, Server, Common, Assets/Data. Based on the analysis in the "Determine Affected Area(s)" step.]
 
     ## Implementation Plan
     This plan outlines the steps to resolve the issue.
