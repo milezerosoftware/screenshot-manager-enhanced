@@ -2,7 +2,10 @@ package com.milezerosoftware.mc.config;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonSyntaxException;
 import net.fabricmc.loader.api.FabricLoader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -16,6 +19,7 @@ public class ConfigManager {
     private static final String CONFIG_FILE_NAME = "screenshotmanager.json";
     private static ModConfig instance;
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+    private static final Logger LOGGER = LoggerFactory.getLogger("screenshot-manager");
 
     private ConfigManager() {
         // Private constructor to enforce Singleton usage
@@ -27,7 +31,7 @@ public class ConfigManager {
      *
      * @return The active ModConfig.
      */
-    public static ModConfig getInstance() {
+    public static synchronized ModConfig getInstance() {
         if (instance == null) {
             load();
         }
@@ -53,9 +57,9 @@ public class ConfigManager {
             try {
                 String json = Files.readString(configFile);
                 instance = GSON.fromJson(json, ModConfig.class);
-            } catch (IOException e) {
-                // If loading fails, fallback to default (logging would be good here)
-                System.err.println("Failed to load Screenshot Manager config: " + e.getMessage());
+            } catch (IOException | JsonSyntaxException e) {
+                // If loading fails, fallback to default
+                LOGGER.error("Failed to load Screenshot Manager config: {}", e.getMessage());
                 instance = new ModConfig();
             }
         } else {
@@ -84,7 +88,7 @@ public class ConfigManager {
             String json = GSON.toJson(instance);
             Files.writeString(configFile, json);
         } catch (IOException e) {
-            System.err.println("Failed to save Screenshot Manager config: " + e.getMessage());
+            LOGGER.error("Failed to save Screenshot Manager config: {}", e.getMessage());
         }
     }
 }

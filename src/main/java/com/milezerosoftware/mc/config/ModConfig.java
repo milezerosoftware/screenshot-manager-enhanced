@@ -1,5 +1,8 @@
 package com.milezerosoftware.mc.config;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class ModConfig {
     // Global Settings
     public boolean enableMetadata = true;
@@ -9,7 +12,7 @@ public class ModConfig {
     public String customPath = "screenshots";
 
     // Per-World Rules: Key = WorldName/IP, Value = Configuration
-    public java.util.Map<String, WorldConfig> worldRules = new java.util.HashMap<>();
+    public Map<String, WorldConfig> worldRules = new HashMap<>();
 
     public ModConfig() {
     }

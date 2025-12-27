@@ -56,4 +56,16 @@ public class ConfigManagerTest {
         assertTrue(config.enableMetadata);
         assertTrue(Files.exists(configFile), "Config file should be created if missing");
     }
+
+    @Test
+    void testMalformedJson() throws IOException {
+        Path configFile = tempDir.resolve("malformed_config.json");
+        Files.writeString(configFile, "{ \"customPath\": \"broken\", \"incompl...");
+
+        ConfigManager.load(configFile);
+        ModConfig config = ConfigManager.getInstance();
+
+        assertNotNull(config, "Config should not be null after malformed load");
+        assertEquals("screenshots", config.customPath, "Should fallback to default on error");
+    }
 }
