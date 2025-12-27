@@ -1,10 +1,16 @@
 package com.milezerosoftware.mc.config;
 
 public class ModConfig {
-    public static final ModConfig INSTANCE = new ModConfig();
+    // Global Settings
+    public boolean enableMetadata = true;
+    public GroupingMode groupingMode = GroupingMode.DATE;
 
-    // Default storage folder name
+    // Default storage folder name (fallback)
     public String customPath = "screenshots";
 
-    // Logic to save/load from JSON should be added here
+    // Per-World Rules: Key = WorldName/IP, Value = Configuration
+    public java.util.Map<String, WorldConfig> worldRules = new java.util.HashMap<>();
+
+    public ModConfig() {
+    }
 }

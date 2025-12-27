@@ -18,7 +18,7 @@ public class ScreenshotRecorderMixin {
     @Inject(method = "getScreenshotFilename(Ljava/io/File;)Ljava/io/File;", at = @At("HEAD"), cancellable = true)
     private static void onGetScreenshotFilename(File gameDir, CallbackInfoReturnable<File> cir) {
         // Resolve our custom folder relative to the game directory
-        File customDir = new File(gameDir, ModConfig.INSTANCE.customPath);
+        File customDir = new File(gameDir, com.milezerosoftware.mc.config.ConfigManager.getInstance().customPath);
 
         if (!customDir.exists()) {
             customDir.mkdirs();

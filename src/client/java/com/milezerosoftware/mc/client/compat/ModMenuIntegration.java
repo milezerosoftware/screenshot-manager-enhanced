@@ -15,13 +15,16 @@ public class ModMenuIntegration implements ModMenuApi {
         return parent -> {
             ConfigBuilder builder = ConfigBuilder.create()
                     .setParentScreen(parent)
-                    .setTitle(Text.literal("Screenshot Manager Settings"));
+                    .setTitle(Text.literal("Screenshot Manager Settings"))
+                    .setSavingRunnable(com.milezerosoftware.mc.config.ConfigManager::save);
 
             builder.getOrCreateCategory(Text.literal("General"))
                     .addEntry(builder.entryBuilder()
-                            .startStrField(Text.literal("Storage Folder"), ModConfig.INSTANCE.customPath)
+                            .startStrField(Text.literal("Storage Folder"),
+                                    com.milezerosoftware.mc.config.ConfigManager.getInstance().customPath)
                             .setDefaultValue("screenshots")
-                            .setSaveConsumer(newValue -> ModConfig.INSTANCE.customPath = newValue)
+                            .setSaveConsumer(newValue -> com.milezerosoftware.mc.config.ConfigManager
+                                    .getInstance().customPath = newValue)
                             .build());
 
             return builder.build();
