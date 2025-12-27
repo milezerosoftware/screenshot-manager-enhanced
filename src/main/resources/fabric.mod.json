@@ -1,41 +1,43 @@
 {
-	"schemaVersion": 1,
-	"id": "screenshotmanager",
-	"version": "${version}",
-	"name": "Screenshot Manager",
-	"description": "A advanced mod to manage where screenshots are saved on a per-world basis. Works for solo worlds and multiplayer servers",
-	"authors": [
-		"Scriptmunkee"
-	],
-	"contact": {
-		"homepage": "https://fabricmc.net/",
-		"sources": "https://github.com/scriptmunkeeofficial/screenshot-manager"
-	},
-	"license": "CC0-1.0",
-	"icon": "assets/screenshot-manager/icon.png",
-	"environment": "client",
-	"entrypoints": {
-		"main": [
-			"com.milezerosoftware.mc.ModInitializerImpl"
-		],
-		"client": [
-			"com.milezerosoftware.mc.ScreenshotManagerClient"
-		],
-        "modmenu": [ "com.milezerosoftware.mc.client.compat.ModMenuIntegration" ]
-	},
-	"mixins": [
-		"screenshotmanager.mixins.json",
-		{
-			"config": "screenshotmanager.client.mixins.json",
-			"environment": "client"
-		}
-      ],
-	"depends": {
-		"fabricloader": ">=0.17.3",
-		"minecraft": "~1.21.10",
-		"fabric-api": "*"
-	},
-	"suggests": {
-		"another-mod": "*"
-	}
+  "schemaVersion": 1,
+  "id": "screenshotmanager",
+  "version": "${version}",
+  "name": "Screenshot Manager",
+  "description": "A advanced mod to manage where screenshots are saved on a per-world basis. Works for solo worlds and multiplayer servers",
+  "authors": [
+    "Scriptmunkee"
+  ],
+  "contact": {
+    "homepage": "https://fabricmc.net/",
+    "sources": "https://github.com/milezerosoftware/screenshot-manager"
+  },
+  "license": "CC0-1.0",
+  "icon": "assets/screenshot-manager/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "main": [
+      "com.milezerosoftware.mc.ModInitializerImpl"
+    ],
+    "client": [
+      "com.milezerosoftware.mc.ScreenshotManagerClient"
+    ],
+    "modmenu": [
+      "com.milezerosoftware.mc.client.compat.ModMenuIntegration"
+    ]
+  },
+  "mixins": [
+    "screenshotmanager.mixins.json",
+    {
+      "config": "screenshotmanager.client.mixins.json",
+      "environment": "client"
+    }
+  ],
+  "depends": {
+    "fabricloader": ">=0.17.3",
+    "minecraft": "~1.21.10",
+    "fabric-api": "*"
+  },
+  "suggests": {
+    "another-mod": "*"
+  }
 }
