@@ -1,7 +1,5 @@
 package com.milezerosoftware.mc.client.mixin;
 
-import com.milezerosoftware.mc.config.ModConfig;
-
 import net.minecraft.client.util.ScreenshotRecorder;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
