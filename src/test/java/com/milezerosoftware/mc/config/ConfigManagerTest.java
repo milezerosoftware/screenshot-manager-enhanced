@@ -21,7 +21,6 @@ public class ConfigManagerTest {
         // 1. Setup initial state
         ConfigManager.load(configFile);
         ModConfig config = ConfigManager.getInstance();
-        config.customPath = "custom/screenshots";
         config.groupingMode = GroupingMode.PROJECT;
         config.worldRules.put("TestWorld", new WorldConfig("worlds/test", false));
 
@@ -37,7 +36,6 @@ public class ConfigManagerTest {
         ModConfig loadedConfig = ConfigManager.getInstance();
 
         // 4. Verify
-        assertEquals("custom/screenshots", loadedConfig.customPath);
         assertEquals(GroupingMode.PROJECT, loadedConfig.groupingMode);
         assertTrue(loadedConfig.worldRules.containsKey("TestWorld"));
         assertEquals("worlds/test", loadedConfig.worldRules.get("TestWorld").customPath);
@@ -51,7 +49,6 @@ public class ConfigManagerTest {
         ModConfig config = ConfigManager.getInstance();
 
         assertNotNull(config);
-        assertEquals("screenshots", config.customPath);
         assertEquals(GroupingMode.DATE, config.groupingMode);
         assertTrue(config.enableMetadata);
         assertTrue(Files.exists(configFile), "Config file should be created if missing");
@@ -60,13 +57,12 @@ public class ConfigManagerTest {
     @Test
     void testMalformedJson() throws IOException {
         Path configFile = tempDir.resolve("malformed_config.json");
-        Files.writeString(configFile, "{ \"customPath\": \"broken\", \"incompl...");
+        Files.writeString(configFile, "{ \"groupingMode\": \"broken\", \"incompl...");
 
         ConfigManager.load(configFile);
         ModConfig config = ConfigManager.getInstance();
 
         assertNotNull(config, "Config should not be null after malformed load");
-        assertEquals("screenshots", config.customPath, "Should fallback to default on error");
 
         // Check for backup file
         Path backupFile = tempDir.resolve("malformed_config.json.broken");
@@ -82,7 +78,6 @@ public class ConfigManagerTest {
         ModConfig config = ConfigManager.getInstance();
 
         assertNotNull(config, "Config should not be null after empty load");
-        assertEquals("screenshots", config.customPath, "Should fallback to default on empty file");
 
         // Verify that the file was "repaired" (i.e., defaults saved to it)
         String content = Files.readString(configFile);
