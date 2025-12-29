@@ -21,10 +21,11 @@ public class ModMenuIntegration implements ModMenuApi {
                         builder.getOrCreateCategory(Text.literal("General"))
                                         .addEntry(builder.entryBuilder()
                                                         .startStrField(Text.literal("Storage Folder"),
-                                                                        ConfigManager.getInstance().customPath)
+                                                                        "screenshots")
                                                         .setDefaultValue("screenshots")
-                                                        .setSaveConsumer(newValue -> ConfigManager
-                                                                        .getInstance().customPath = newValue)
+                                                        .setSaveConsumer(newValue -> {
+                                                            // Temporarily disabled. Per-world paths will be configured elsewhere.
+                                                        })
                                                         .build());
 
                         return builder.build();
