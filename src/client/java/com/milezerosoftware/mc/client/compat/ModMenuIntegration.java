@@ -1,5 +1,6 @@
 package com.milezerosoftware.mc.client.compat;
 
+import com.milezerosoftware.mc.config.ConfigManager;
 import com.terraformersmc.modmenu.api.ConfigScreenFactory;
 import com.terraformersmc.modmenu.api.ModMenuApi;
 import me.shedaniel.clothconfig2.api.ConfigBuilder;
@@ -15,17 +16,15 @@ public class ModMenuIntegration implements ModMenuApi {
                         ConfigBuilder builder = ConfigBuilder.create()
                                         .setParentScreen(parent)
                                         .setTitle(Text.literal("Screenshot Manager Settings"))
-                                        .setSavingRunnable(com.milezerosoftware.mc.config.ConfigManager::save);
+                                        .setSavingRunnable(ConfigManager::save);
 
                         builder.getOrCreateCategory(Text.literal("General"))
                                         .addEntry(builder.entryBuilder()
                                                         .startStrField(Text.literal("Storage Folder"),
-                                                                        com.milezerosoftware.mc.config.ConfigManager
-                                                                                        .getInstance().customPath)
+                                                                        ConfigManager.getInstance().customPath)
                                                         .setDefaultValue("screenshots")
-                                                        .setSaveConsumer(
-                                                                        newValue -> com.milezerosoftware.mc.config.ConfigManager
-                                                                                        .getInstance().customPath = newValue)
+                                                        .setSaveConsumer(newValue -> ConfigManager
+                                                                        .getInstance().customPath = newValue)
                                                         .build());
 
                         return builder.build();

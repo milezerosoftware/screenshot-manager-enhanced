@@ -108,61 +108,72 @@ Implementation Note: the GlobalConfig and WorldRules will be in the identified s
 
 ## 🔍 Code Review Findings
 
-# Change summary: Introduces configuration persistence via `ConfigManager` and adds data models for `GroupingMode` and `WorldConfig` to support future features.
+# Change summary: Implements configuration persistence using Gson and updates the client-side integration to support the new configuration structure.
 
 ## File: src/main/java/com/milezerosoftware/mc/config/ConfigManager.java
-### L28: [MEDIUM] Lazy initialization is not thread-safe.
-`getScreenshotFilename` (and thus `getInstance`) may be called from worker threads during async screenshot saving. This creates a race condition for `instance`.
-
-Suggested change:
-```java
-    /**
-     * Gets the current configuration instance.
-     * If not loaded, it attempts to load from disk.
-     *
-     * @return The active ModConfig.
-     */
-    public static synchronized ModConfig getInstance() {
-        if (instance == null) {
-            load();
-        }
-        return instance;
-    }
-```
-
-### L53: [MEDIUM] Uncaught `JsonSyntaxException` can crash the game.
-`GSON.fromJson` throws a `JsonSyntaxException` (a `RuntimeException`) if the JSON is malformed. This block only catches `IOException`, so a typo in the config file will crash the client.
+### L58: [HIGH] Potential StackOverflowError and Data Loss on load failures.
+Two issues here:
+1. If the configuration file is empty (0 bytes), `GSON.fromJson` returns `null`. This leaves `instance` as `null`, causing `getInstance()` (L34) to call `load()` repeatedly in an infinite recursion loop until the game crashes.
+2. If `GSON.fromJson` throws a `JsonSyntaxException` (malformed JSON), the catch block resets `instance` to a default `ModConfig`. If the user then saves the config (e.g., via ModMenu), the original malformed file—and the user's data—is silently overwritten and lost.
 
 Suggested change:
 ```java
             try {
                 String json = Files.readString(configFile);
                 instance = GSON.fromJson(json, ModConfig.class);
-            } catch (IOException | com.google.gson.JsonSyntaxException e) {
-                // If loading fails, fallback to default (logging would be good here)
-                System.err.println("Failed to load Screenshot Manager config: " + e.getMessage());
+                // Fix for infinite recursion on empty file
+                if (instance == null) {
+                    LOGGER.warn("Configuration file was empty. Resetting to defaults.");
+                    instance = new ModConfig();
+                    save(configFile);
+                }
+            } catch (IOException | JsonSyntaxException e) {
+                LOGGER.error("Failed to load Screenshot Manager config: {}", e.getMessage());
+                // Backup broken file to prevent data loss
+                try {
+                    Files.copy(configFile, configFile.resolveSibling(CONFIG_FILE_NAME + ".broken"));
+                    LOGGER.info("Backed up broken config to {}.broken", CONFIG_FILE_NAME);
+                } catch (IOException copyEx) {
+                    LOGGER.error("Failed to backup broken config", copyEx);
+                }
                 instance = new ModConfig();
             }
 ```
 
-### L56: [LOW] Use of `System.err.println`.
-Direct usage of `System.err` is discouraged in Fabric mods. Consider using a `Logger` (e.g., `org.slf4j.LoggerFactory.getLogger("screenshot-manager")`) for proper log level control and formatting.
-
-## File: src/main/java/com/milezerosoftware/mc/config/ModConfig.java
-### L12: [LOW] Verbose fully qualified names.
-While valid, using fully qualified names for `Map` and `HashMap` is verbose. Consider importing them for cleaner code.
+### L46: [MEDIUM] Thread safety inconsistency.
+`getInstance` is `synchronized`, but `load` and `save` are not. If `load` or `save` are called from other threads (e.g., a command reload or auto-save) while `getInstance` is running, race conditions could occur. Since `getInstance` locks on the class, `load` and `save` should likely be synchronized as well to ensure atomic reads/writes of `instance` and file operations.
 
 Suggested change:
 ```java
-import java.util.HashMap;
-import java.util.Map;
+    /**
+     * Loads the configuration from disk.
+     */
+    public static synchronized void load() {
+        load(FabricLoader.getInstance().getConfigDir().resolve(CONFIG_FILE_NAME));
+    }
 
-public class ModConfig {
     // ...
-    
-    // Per-World Rules: Key = WorldName/IP, Value = Configuration
-    public Map<String, WorldConfig> worldRules = new HashMap<>();
-    
-    // ...
-}
+
+    public static synchronized void save() {
+        // ...
+    }
+```
+
+## File: src/client/java/com/milezerosoftware/mc/client/compat/ModMenuIntegration.java
+### L23: [LOW] Reduced readability due to Fully Qualified Names.
+The change removes the `ModConfig` import and uses verbose fully qualified names (FQNs) for `ConfigManager`. This makes the code harder to read and maintain.
+
+Suggested change:
+```java
+import com.milezerosoftware.mc.config.ConfigManager;
+
+// ... inside getModConfigScreenFactory ...
+
+                        builder.getOrCreateCategory(Text.literal("General"))
+                                        .addEntry(builder.entryBuilder()
+                                                        .startStrField(Text.literal("Storage Folder"),
+                                                                        ConfigManager.getInstance().customPath)
+                                                        .setDefaultValue("screenshots")
+                                                        .setSaveConsumer(newValue -> ConfigManager.getInstance().customPath = newValue)
+                                                        .build());
 ```

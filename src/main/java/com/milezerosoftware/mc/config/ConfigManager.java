@@ -43,7 +43,7 @@ public class ConfigManager {
      * If the file does not exist, a new specific default configuration is created
      * and saved.
      */
-    public static void load() {
+    public static synchronized void load() {
         load(FabricLoader.getInstance().getConfigDir().resolve(CONFIG_FILE_NAME));
     }
 
@@ -52,14 +52,27 @@ public class ConfigManager {
      * 
      * @param configFile The full path to the configuration file.
      */
-    public static void load(Path configFile) {
+    public static synchronized void load(Path configFile) {
         if (Files.exists(configFile)) {
             try {
                 String json = Files.readString(configFile);
                 instance = GSON.fromJson(json, ModConfig.class);
+
+                // Fix for infinite recursion on empty file
+                if (instance == null) {
+                    LOGGER.warn("Configuration file was empty. Resetting to defaults.");
+                    instance = new ModConfig();
+                    save(configFile);
+                }
             } catch (IOException | JsonSyntaxException e) {
-                // If loading fails, fallback to default
                 LOGGER.error("Failed to load Screenshot Manager config: {}", e.getMessage());
+                // Backup broken file to prevent data loss
+                try {
+                    Files.copy(configFile, configFile.resolveSibling(CONFIG_FILE_NAME + ".broken"));
+                    LOGGER.info("Backed up broken config to {}.broken", CONFIG_FILE_NAME);
+                } catch (IOException copyEx) {
+                    LOGGER.error("Failed to backup broken config", copyEx);
+                }
                 instance = new ModConfig();
             }
         } else {
@@ -71,7 +84,7 @@ public class ConfigManager {
     /**
      * Saves the current configuration to disk.
      */
-    public static void save() {
+    public static synchronized void save() {
         save(FabricLoader.getInstance().getConfigDir().resolve(CONFIG_FILE_NAME));
     }
 
@@ -80,7 +93,7 @@ public class ConfigManager {
      * 
      * @param configFile The full path to the configuration file.
      */
-    public static void save(Path configFile) {
+    public static synchronized void save(Path configFile) {
         if (instance == null)
             return;
 
