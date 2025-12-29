@@ -31,6 +31,12 @@ public class ScreenshotRecorderMixin {
         String timestamp = new SimpleDateFormat("yyyy-MM-dd_HH.mm.ss").format(new Date());
         File screenshotFile = new File(worldScreenshotsDir, timestamp + ".png");
 
+        // Handle filename collisions by appending a suffix
+        int i = 1;
+        while (screenshotFile.exists()) {
+            screenshotFile = new File(worldScreenshotsDir, timestamp + "_" + (i++) + ".png");
+        }
+
         // Set the return value and cancel original method execution
         cir.setReturnValue(screenshotFile);
     }
