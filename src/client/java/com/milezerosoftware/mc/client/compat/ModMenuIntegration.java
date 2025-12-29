@@ -23,7 +23,7 @@ public class ModMenuIntegration implements ModMenuApi {
                                                         .startStrField(Text.literal("Storage Folder"),
                                                                         "screenshots")
                                                         .setDefaultValue("screenshots")
-                                                        .setSaveConsumer(_ -> {
+                                                        .setSaveConsumer(newValue -> {
                                                             // Temporarily disabled. Per-world paths will be configured elsewhere.
                                                         })
                                                         .build());
