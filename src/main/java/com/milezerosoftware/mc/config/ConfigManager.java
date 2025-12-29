@@ -68,8 +68,8 @@ public class ConfigManager {
                 LOGGER.error("Failed to load Screenshot Manager config: {}", e.getMessage());
                 // Backup broken file to prevent data loss
                 try {
-                    Files.copy(configFile, configFile.resolveSibling(CONFIG_FILE_NAME + ".broken"));
-                    LOGGER.info("Backed up broken config to {}.broken", CONFIG_FILE_NAME);
+                    Files.copy(configFile, configFile.resolveSibling(configFile.getFileName().toString() + ".broken"));
+                    LOGGER.info("Backed up broken config to {}.broken", configFile.getFileName());
                 } catch (IOException copyEx) {
                     LOGGER.error("Failed to backup broken config", copyEx);
                 }

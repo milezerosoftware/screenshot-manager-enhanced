@@ -67,5 +67,27 @@ public class ConfigManagerTest {
 
         assertNotNull(config, "Config should not be null after malformed load");
         assertEquals("screenshots", config.customPath, "Should fallback to default on error");
+
+        // Check for backup file
+        Path backupFile = tempDir.resolve("malformed_config.json.broken");
+        assertTrue(Files.exists(backupFile), "Backup file should be created for malformed config");
+    }
+
+    @Test
+    void testEmptyFile() throws IOException {
+        Path configFile = tempDir.resolve("empty_config.json");
+        Files.createFile(configFile); // Create 0-byte file
+
+        ConfigManager.load(configFile);
+        ModConfig config = ConfigManager.getInstance();
+
+        assertNotNull(config, "Config should not be null after empty load");
+        assertEquals("screenshots", config.customPath, "Should fallback to default on empty file");
+
+        // Verify that the file was "repaired" (i.e., defaults saved to it)
+        String content = Files.readString(configFile);
+        assertFalse(content.isEmpty(), "Config file should be repopulated with defaults");
+        // Verify recursion didn't happen (if strict timeout logic isn't in place,
+        // implicit success is passing this line)
     }
 }
