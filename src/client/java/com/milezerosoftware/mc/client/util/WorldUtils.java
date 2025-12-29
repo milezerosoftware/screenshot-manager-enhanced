@@ -47,6 +47,24 @@ public class WorldUtils {
     }
 
     /**
+     * Gets a filesystem-safe version of the world identifier.
+     * <p>
+     * This method sanitizes the output of {@link #getWorldId()} by replacing characters
+     * that are illegal in directory names on most operating systems.
+     *
+     * @return A sanitized {@link String} suitable for use as a directory name.
+     * @see #getWorldId()
+     */
+    @NotNull
+    public static String getSafeWorldId() {
+        String worldId = getWorldId();
+        // Replace illegal characters with an underscore.
+        // Windows forbids < > : " / \ | ? *
+        // Regex matches any character that is not a-z, A-Z, 0-9, dot, or hyphen.
+        return worldId.replaceAll("[^a-zA-Z0-9\\.\\-]", "_");
+    }
+
+    /**
      * Gets the display name of the current world.
      *
      * @return A {@link String} representing the world's display name.

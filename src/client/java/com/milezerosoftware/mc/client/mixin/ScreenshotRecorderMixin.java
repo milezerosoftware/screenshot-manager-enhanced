@@ -1,5 +1,6 @@
 package com.milezerosoftware.mc.client.mixin;
 
+import com.milezerosoftware.mc.client.util.WorldUtils;
 import net.minecraft.client.util.ScreenshotRecorder;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -15,15 +16,22 @@ public class ScreenshotRecorderMixin {
     // Intermediary: method_1660 [5, 6]
     @Inject(method = "getScreenshotFilename(Ljava/io/File;)Ljava/io/File;", at = @At("HEAD"), cancellable = true)
     private static void onGetScreenshotFilename(File gameDir, CallbackInfoReturnable<File> cir) {
-        // Resolve our custom folder relative to the game directory
-        File customDir = new File(gameDir, "screenshots");
+        // Get the sanitized world/server name
+        String safeWorldId = WorldUtils.getSafeWorldId();
 
-        if (!customDir.exists()) {
-            customDir.mkdirs();
+        // Construct the dynamic path: .../screenshots/{worldId}/
+        File worldScreenshotsDir = new File(new File(gameDir, "screenshots"), safeWorldId);
+
+        // Ensure the directory exists
+        if (!worldScreenshotsDir.exists()) {
+            worldScreenshotsDir.mkdirs();
         }
 
-        // Maintain standard vanilla naming: YYYY-MM-DD_HH.MM.SS.png [3]
+        // Maintain standard vanilla naming: YYYY-MM-DD_HH.MM.SS.png
         String timestamp = new SimpleDateFormat("yyyy-MM-dd_HH.mm.ss").format(new Date());
-        cir.setReturnValue(new File(customDir, timestamp + ".png"));
+        File screenshotFile = new File(worldScreenshotsDir, timestamp + ".png");
+
+        // Set the return value and cancel original method execution
+        cir.setReturnValue(screenshotFile);
     }
 }
