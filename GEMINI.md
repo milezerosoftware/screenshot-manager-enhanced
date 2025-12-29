@@ -19,29 +19,44 @@ storage locations dynamically based on the current world or server (per-world ba
 
 ### Core Logic
 
+* **This is important: High-Level Project Architecture**
+  Since your mod targets client-only features (screenshots/UI), almost all logic will live in the client source set,
+  while your data models live in main.
+
+| Package     | Package Path                            | Responsibility                                                      |
+|-------------|-----------------------------------------|---------------------------------------------------------------------|
+| Data Models | `com.milezerosoftware.mc.config`        | POJO classes for global and per-world settings.                     |
+| Logic       | `com.milezerosoftware.mc.client.util`   | Extracting world data (coordinates, days) and PNG metadata writing. |
+| Integration | `com.milezerosoftware.mc.client.mixin`  | Intercepting the screenshot process.                                |
+| UI          | `com.milezerosoftware.mc.client.compat` | ModMenu and Cloth Config screens.                                   |
+
 * **Mixin:** `com.milezerosoftware.mc.client.mixin.ScreenshotRecorderMixin`
-    * Injects into `net.minecraft.client.util.ScreenshotRecorder.getScreenshotFilename`.
-    * Currently redirects all screenshots to a path defined in `ModConfig` (defaulting to a subfolder).
+  * Injects into `net.minecraft.client.util.ScreenshotRecorder.getScreenshotFilename`.
+  * Currently redirects all screenshots to a path defined in `ModConfig` (defaulting to a subfolder).
 * **Configuration:** `com.milezerosoftware.mc.config.ModConfig`
-    * Currently a singleton stub.
-    * **TODO:** Implement integration with Cloth Config (dependency is already added) and dynamic path resolution logic.
+  * Currently a singleton stub.
+  * **TODO:** Implement integration with Cloth Config (dependency is already added) and dynamic path resolution logic.
 
 ## Building and Running
 
 The project uses the standard Gradle wrapper.
 
 * **Build Mod:**
+
   ```bash
   ./gradlew build
   ```
+
   Artifacts will be in `build/libs/`.
 
 * **Run Client:**
+
   ```bash
   ./gradlew runClient
   ```
 
 * **Generate Sources (IDE):**
+
   ```bash
   ./gradlew genSources
   ```
@@ -51,6 +66,7 @@ The project uses the standard Gradle wrapper.
 The project uses **JUnit 5** for unit testing.
 
 * **Run Tests:**
+
   ```bash
   ./gradlew test
   ```
@@ -82,14 +98,3 @@ Defined in `build.gradle`:
   Logic needs to be added to detect the current world/server context.
 * **Mixins:** Defined in `screenshotmanager.mixins.json` (common) and `screenshotmanager.client.mixins.json` (
   client-only).
-
-* **This is important: High-Level Project Architecture**
-  Since your mod targets client-only features (screenshots/UI), almost all logic will live in the client source set,
-  while your data models live in main.
-
-| Package     | Package Path                            | Responsibility                                                      |
-|-------------|-----------------------------------------|---------------------------------------------------------------------|
-| Data Models | `com.milezerosoftware.mc.config`        | POJO classes for global and per-world settings.                     |
-| Logic       | `com.milezerosoftware.mc.client.util`   | Extracting world data (coordinates, days) and PNG metadata writing. |
-| Integration | `com.milezerosoftware.mc.client.mixin`  | Intercepting the screenshot process.                                |
-| UI          | `com.milezerosoftware.mc.client.compat` | ModMenu and Cloth Config screens.                                   |

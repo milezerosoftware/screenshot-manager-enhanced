@@ -1,7 +1,7 @@
 package com.milezerosoftware.mc.client.util;
 
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.world.ClientWorld;
+
 import net.minecraft.server.integrated.IntegratedServer;
 import net.minecraft.util.WorldSavePath;
 import org.jetbrains.annotations.NotNull;
