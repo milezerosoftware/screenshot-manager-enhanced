@@ -18,7 +18,15 @@ public class ModMenuIntegration implements ModMenuApi {
                                         .setTitle(Text.literal("Screenshot Manager Settings"))
                                         .setSavingRunnable(ConfigManager::save);
 
-                        builder.getOrCreateCategory(Text.literal("General"));
+                        builder.getOrCreateCategory(Text.literal("General"))
+                                        .addEntry(builder.entryBuilder()
+                                                        .startStrField(Text.literal("Storage Folder"),
+                                                                        "screenshots")
+                                                        .setDefaultValue("screenshots")
+                                                        .setSaveConsumer(newValue -> {
+                                                            // Temporarily disabled. Per-world paths will be configured elsewhere.
+                                                        })
+                                                        .build());
 
                         return builder.build();
                 };
