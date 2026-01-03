@@ -6,6 +6,7 @@ import net.minecraft.server.integrated.IntegratedServer;
 import net.minecraft.util.WorldSavePath;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.File;
 import java.net.InetSocketAddress;
 
 public class WorldUtils {
@@ -17,7 +18,7 @@ public class WorldUtils {
      *
      * <ul>
      * <li>For single-player worlds, this is the folder name of the world save.</li>
-     * <li>For multiplayer servers, this is the server's IP address.</li>
+     * <li>For multiplayer servers, this is the server name, or the IP address if the name is unavailable.</li>
      * <li>If the client is not in a world (e.g., on the main menu), it returns
      * "MENU".</li>
      * </ul>
@@ -31,25 +32,45 @@ public class WorldUtils {
         }
 
         if (client.isInSingleplayer()) {
+            System.out.println("Client is in singleplayer");
             IntegratedServer server = client.getServer();
             if (server != null) {
-                // Returns the folder name of the world
-                return server.getSavePath(WorldSavePath.ROOT).getFileName().toString();
+                try {
+                    // Get the actual folder name by resolving the canonical path
+                    String folderName = server.getSavePath(WorldSavePath.ROOT).toFile().getCanonicalFile().getName();
+                    System.out.println("Unique Level folder name: " + folderName);
+                    return folderName;
+                } catch (Exception e) {
+                    System.out.println("Failed to resolve unique folder name: " + e.getMessage());
+                    // Fallback to the level name if canonical path resolution fails
+                    System.out.println("World Save Path: " + WorldSavePath.ROOT.toString());
+                    System.out.println("World Save Path: " + WorldSavePath.ROOT.getRelativePath());
+                    return server.getSaveProperties().getLevelName();
+                }
             }
-        } else if (client.getNetworkHandler() != null && client.getNetworkHandler().getConnection() != null) {
-            InetSocketAddress address = (InetSocketAddress) client.getNetworkHandler().getConnection().getAddress();
-            if (address != null) {
-                return address.getHostString();
+        } else if (!client.isInSingleplayer()) {
+            System.out.println("Client is in multiplayer");
+            if (client.getCurrentServerEntry() != null) {
+                return client.getCurrentServerEntry().name;
+            }
+            // Fallback to IP address if joined via Direct Connect
+            if (client.getNetworkHandler() != null && client.getNetworkHandler().getConnection() != null) {
+                InetSocketAddress address = (InetSocketAddress) client.getNetworkHandler().getConnection().getAddress();
+                if (address != null) {
+                    return address.getHostString();
+                }
             }
         }
 
         return "UNKNOWN";
     }
+    
 
     /**
      * Gets a filesystem-safe version of the world identifier.
      * <p>
-     * This method sanitizes the output of {@link #getWorldId()} by replacing characters
+     * This method sanitizes the output of {@link #getWorldId()} by replacing
+     * characters
      * that are illegal in directory names on most operating systems.
      *
      * @return A sanitized {@link String} suitable for use as a directory name.
@@ -58,10 +79,10 @@ public class WorldUtils {
     @NotNull
     public static String getSafeWorldId() {
         String worldId = getWorldId();
-        // Replace illegal characters with an underscore.
-        // Windows forbids < > : " / \ | ? *
-        // Regex matches any character that is not a-z, A-Z, 0-9, dot, or hyphen.
-        return worldId.replaceAll("[^a-zA-Z0-9\\.\\-]", "_");
+        // Sanitize by replacing any character that isn't alphanumeric, a dot, a hyphen, or parentheses with an underscore.
+        // This ensures compatibility with strict file system naming rules (e.g., Windows forbids < > : " / \ | ? *).
+        System.out.println("World ID: " + worldId);
+        return worldId.replaceAll("[^a-zA-Z0-9\\.\\-\\(\\)]", "_");
     }
 
     /**

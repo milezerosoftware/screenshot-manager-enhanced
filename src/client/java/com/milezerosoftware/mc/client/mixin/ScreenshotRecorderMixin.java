@@ -18,9 +18,11 @@ public class ScreenshotRecorderMixin {
     private static void onGetScreenshotFilename(File gameDir, CallbackInfoReturnable<File> cir) {
         // Get the sanitized world/server name
         String safeWorldId = WorldUtils.getSafeWorldId();
+        System.out.println("Safe world ID: " + safeWorldId);
 
         // Construct the dynamic path: .../screenshots/{worldId}/
-        File worldScreenshotsDir = new File(new File(gameDir, "screenshots"), safeWorldId);
+        File worldScreenshotsDir = new File(gameDir, safeWorldId);
+        System.out.println("World screenshots directory: " + worldScreenshotsDir);
 
         // Ensure the directory exists
         if (!worldScreenshotsDir.exists()) {
