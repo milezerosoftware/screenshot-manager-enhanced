@@ -18,7 +18,8 @@ public class WorldUtils {
      *
      * <ul>
      * <li>For single-player worlds, this is the folder name of the world save.</li>
-     * <li>For multiplayer servers, this is the server name, or the IP address if the name is unavailable.</li>
+     * <li>For multiplayer servers, this is the server name, or the IP address if
+     * the name is unavailable.</li>
      * <li>If the client is not in a world (e.g., on the main menu), it returns
      * "MENU".</li>
      * </ul>
@@ -64,7 +65,6 @@ public class WorldUtils {
 
         return "UNKNOWN";
     }
-    
 
     /**
      * Gets a filesystem-safe version of the world identifier.
@@ -79,8 +79,10 @@ public class WorldUtils {
     @NotNull
     public static String getSafeWorldId() {
         String worldId = getWorldId();
-        // Sanitize by replacing any character that isn't alphanumeric, a dot, a hyphen, or parentheses with an underscore.
-        // This ensures compatibility with strict file system naming rules (e.g., Windows forbids < > : " / \ | ? *).
+        // Sanitize by replacing any character that isn't alphanumeric, a dot, a hyphen,
+        // or parentheses with an underscore.
+        // This ensures compatibility with strict file system naming rules (e.g.,
+        // Windows forbids < > : " / \ | ? *).
         System.out.println("World ID: " + worldId);
         return worldId.replaceAll("[^a-zA-Z0-9\\.\\-\\(\\)]", "_");
     }
@@ -115,7 +117,8 @@ public class WorldUtils {
     @NotNull
     public static String getDimension() {
         if (client.world != null) {
-            return client.world.getRegistryKey().getValue().toString();
+            String dimension = client.world.getRegistryKey().getValue().toString();
+            return dimension.replace("minecraft:", "").replace("minecraft_", "");
         }
         return "UNKNOWN";
     }

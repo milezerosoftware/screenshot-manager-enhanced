@@ -2,6 +2,7 @@ package com.milezerosoftware.mc.client.mixin;
 
 import com.milezerosoftware.mc.client.util.ScreenshotPathGenerator;
 import com.milezerosoftware.mc.client.util.WorldUtils;
+import com.milezerosoftware.mc.config.ConfigManager;
 import com.milezerosoftware.mc.config.ModConfig;
 import net.minecraft.client.util.ScreenshotRecorder;
 import org.spongepowered.asm.mixin.Mixin;
@@ -22,7 +23,7 @@ public class ScreenshotRecorderMixin {
         String safeWorldId = WorldUtils.getSafeWorldId();
         String rawWorldId = WorldUtils.getWorldId();
         String dimension = WorldUtils.getDimension();
-        ModConfig config = ModConfig.getInstance();
+        ModConfig config = ConfigManager.getInstance();
 
         // Use the centralized path generator
         File screenshotFile = ScreenshotPathGenerator.getScreenshotDirectory(

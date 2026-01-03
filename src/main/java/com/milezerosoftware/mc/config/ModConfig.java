@@ -11,12 +11,6 @@ public class ModConfig {
     // Per-World Rules: Key = WorldName/IP, Value = Configuration
     public Map<String, WorldConfig> worldRules = new HashMap<>();
 
-    private static final ModConfig INSTANCE = new ModConfig();
-
-    public static ModConfig getInstance() {
-        return INSTANCE;
-    }
-
     public ModConfig() {
     }
 }
