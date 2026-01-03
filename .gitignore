@@ -4,6 +4,7 @@
 build/
 out/
 classes/
+logs/
 
 # eclipse
 
@@ -19,7 +20,6 @@ classes/
 # vscode
 
 .settings/
-.vscode/
 bin/
 .classpath
 .project
@@ -31,6 +31,10 @@ bin/
 # fabric
 
 run/
+data/
+downloads/
+crash-reports/
+
 
 # java
 
@@ -38,4 +42,3 @@ hs_err_*.log
 replay_*.log
 *.hprof
 *.jfr
-logs/
