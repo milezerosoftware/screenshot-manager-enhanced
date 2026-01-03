@@ -49,7 +49,7 @@ public class ConfigManagerTest {
         ModConfig config = ConfigManager.getInstance();
 
         assertNotNull(config);
-        assertEquals(GroupingMode.DATE, config.groupingMode);
+        assertEquals(GroupingMode.WORLD, config.groupingMode);
         assertTrue(config.enableMetadata);
         assertTrue(Files.exists(configFile), "Config file should be created if missing");
     }

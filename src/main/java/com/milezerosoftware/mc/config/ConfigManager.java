@@ -13,6 +13,25 @@ import java.nio.file.Path;
 
 /**
  * Manages the persistence of the {@link ModConfig}.
+ * <p>
+ * Configuration is stored in <code>config/screenshotmanager.json</code>.
+ * Example structure:
+ * 
+ * <pre>
+ * {
+ *   "enableMetadata": true,
+ *   "groupingMode": "WORLD",
+ *   "worldRules": {
+ *     "My Multiplayer Server": {
+ *       "customPath": "",
+ *       "active": true
+ *     },
+ *     "Singleplayer World": {
+ *       "active": false
+ *     }
+ *   }
+ * }
+ * </pre>
  */
 public class ConfigManager {
 

@@ -1,6 +1,8 @@
 package com.milezerosoftware.mc.client.mixin;
 
+import com.milezerosoftware.mc.client.util.ScreenshotPathGenerator;
 import com.milezerosoftware.mc.client.util.WorldUtils;
+import com.milezerosoftware.mc.config.ModConfig;
 import net.minecraft.client.util.ScreenshotRecorder;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -18,28 +20,35 @@ public class ScreenshotRecorderMixin {
     private static void onGetScreenshotFilename(File gameDir, CallbackInfoReturnable<File> cir) {
         // Get the sanitized world/server name
         String safeWorldId = WorldUtils.getSafeWorldId();
-        System.out.println("Safe world ID: " + safeWorldId);
+        String rawWorldId = WorldUtils.getWorldId();
+        String dimension = WorldUtils.getDimension();
+        ModConfig config = ModConfig.getInstance();
 
-        // Construct the dynamic path: .../screenshots/{worldId}/
-        File worldScreenshotsDir = new File(gameDir, safeWorldId);
-        System.out.println("World screenshots directory: " + worldScreenshotsDir);
+        // Use the centralized path generator
+        File screenshotFile = ScreenshotPathGenerator.getScreenshotDirectory(
+                gameDir,
+                config,
+                rawWorldId,
+                safeWorldId,
+                dimension,
+                new Date());
 
         // Ensure the directory exists
-        if (!worldScreenshotsDir.exists()) {
-            worldScreenshotsDir.mkdirs();
+        if (!screenshotFile.exists()) {
+            screenshotFile.mkdirs();
         }
 
         // Maintain standard vanilla naming: YYYY-MM-DD_HH.MM.SS.png
         String timestamp = new SimpleDateFormat("yyyy-MM-dd_HH.mm.ss").format(new Date());
-        File screenshotFile = new File(worldScreenshotsDir, timestamp + ".png");
+        File finalFile = new File(screenshotFile, timestamp + ".png");
 
         // Handle filename collisions by appending a suffix
         int i = 1;
-        while (screenshotFile.exists()) {
-            screenshotFile = new File(worldScreenshotsDir, timestamp + "_" + (i++) + ".png");
+        while (finalFile.exists()) {
+            finalFile = new File(screenshotFile, timestamp + "_" + (i++) + ".png");
         }
 
         // Set the return value and cancel original method execution
-        cir.setReturnValue(screenshotFile);
+        cir.setReturnValue(finalFile);
     }
 }
