@@ -78,13 +78,22 @@ public class WorldUtils {
      */
     @NotNull
     public static String getSafeWorldId() {
-        String worldId = getWorldId();
+        return sanitize(getWorldId());
+    }
+
+    /**
+     * Sanitizes a string for use as a filesystem directory name.
+     * 
+     * @param input The string to sanitize.
+     * @return A sanitized version of the string.
+     */
+    @NotNull
+    public static String sanitize(String input) {
         // Sanitize by replacing any character that isn't alphanumeric, a dot, a hyphen,
         // or parentheses with an underscore.
         // This ensures compatibility with strict file system naming rules (e.g.,
         // Windows forbids < > : " / \ | ? *).
-        System.out.println("World ID: " + worldId);
-        return worldId.replaceAll("[^a-zA-Z0-9\\.\\-\\(\\)]", "_");
+        return input.replaceAll("[^a-zA-Z0-9\\.\\-\\(\\)]", "_");
     }
 
     /**

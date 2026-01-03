@@ -1,6 +1,8 @@
 package com.milezerosoftware.mc.client.util;
 
 import com.milezerosoftware.mc.config.GroupingMode;
+import com.milezerosoftware.mc.config.ModConfig;
+import com.milezerosoftware.mc.config.WorldConfig;
 
 import java.io.File;
 import java.text.SimpleDateFormat;
@@ -20,10 +22,10 @@ public class ScreenshotPathGenerator {
      * @param date           The date of the screenshot.
      * @return The target directory for the screenshot.
      */
-    public static File getScreenshotDirectory(File screenshotsDir, com.milezerosoftware.mc.config.ModConfig config,
+    public static File getScreenshotDirectory(File screenshotsDir, ModConfig config,
             String rawWorldId, String safeWorldId, String dimension, Date date) {
         // 1. Check for Per-World Config
-        com.milezerosoftware.mc.config.WorldConfig worldConfig = config.worldRules.get(rawWorldId);
+        WorldConfig worldConfig = config.worldRules.get(rawWorldId);
 
         // Default to global settings
         GroupingMode mode = config.groupingMode;

@@ -20,8 +20,8 @@ public class ScreenshotRecorderMixin {
     @Inject(method = "getScreenshotFilename(Ljava/io/File;)Ljava/io/File;", at = @At("HEAD"), cancellable = true)
     private static void onGetScreenshotFilename(File gameDir, CallbackInfoReturnable<File> cir) {
         // Get the sanitized world/server name
-        String safeWorldId = WorldUtils.getSafeWorldId();
         String rawWorldId = WorldUtils.getWorldId();
+        String safeWorldId = WorldUtils.sanitize(rawWorldId);
         String dimension = WorldUtils.getDimension();
         ModConfig config = ConfigManager.getInstance();
 
