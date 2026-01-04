@@ -52,6 +52,36 @@ public class ScreenshotPathGeneratorTest {
     }
 
     @Test
+    public void testWorldDimension() {
+        ModConfig config = new ModConfig();
+        config.groupingMode = GroupingMode.WORLD_DIMENSION;
+
+        File result = ScreenshotPathGenerator.getScreenshotDirectory(screenshotsDir, config, rawWorldId, safeWorldId,
+                dimension, date);
+        assertEquals(new File(screenshotsDir, "Test_World_1/minecraft_the_nether"), result);
+    }
+
+    @Test
+    public void testWorldDate() {
+        ModConfig config = new ModConfig();
+        config.groupingMode = GroupingMode.WORLD_DATE;
+
+        File result = ScreenshotPathGenerator.getScreenshotDirectory(screenshotsDir, config, rawWorldId, safeWorldId,
+                dimension, date);
+        assertEquals(new File(screenshotsDir, "Test_World_1/2025-01-01"), result);
+    }
+
+    @Test
+    public void testWorldDateDimension() {
+        ModConfig config = new ModConfig();
+        config.groupingMode = GroupingMode.WORLD_DATE_DIMENSION;
+
+        File result = ScreenshotPathGenerator.getScreenshotDirectory(screenshotsDir, config, rawWorldId, safeWorldId,
+                dimension, date);
+        assertEquals(new File(screenshotsDir, "Test_World_1/2025-01-01/minecraft_the_nether"), result);
+    }
+
+    @Test
     public void testPerWorldDisabled() {
         ModConfig config = new ModConfig();
         config.groupingMode = GroupingMode.WORLD;
