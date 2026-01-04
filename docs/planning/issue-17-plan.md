@@ -1,7 +1,7 @@
 # Issue Resolution Plan: feat: Expand groupingMode options and implementation
 
 **Issue Link**: <https://github.com/milezerosoftware/screenshot-manager/issues/17>
-**Current Status**: Implemented / In Verification
+**Current Status**: Completed
 
 ## Issue Summary
 
@@ -51,8 +51,8 @@ Run the client (`./gradlew runClient`) and test the following scenarios:
 | **5. Order Swap** | `WORLD_DATE_DIMENSION` | Screenshot in End | `run/screenshots/{WorldName}/{yyyy-MM-dd}/the_end/{Timestamp}.png` |
 
 ### Automated Tests
-- [ ] Run existing tests: `./gradlew test`
-- [ ] **Recommendation**: Add a unit test for `ScreenshotPathGenerator` to verify path construction without needing to run the full game client.
+- [x] Run existing tests: `./gradlew test`
+- [x] **Recommendation**: Add a unit test for `ScreenshotPathGenerator` to verify path construction without needing to run the full game client.
 
 ## Todo Checklist
 
@@ -64,4 +64,4 @@ Run the client (`./gradlew runClient`) and test the following scenarios:
 - [x] Update `ConfigManager` documentation.
 - [x] Run `gradle build` to ensure no compilation errors.
 - [x] Perform Manual Verification steps. (Covered by expanded Unit Tests)
-- [ ] Commit and Push changes.
+- [x] Commit and Push changes.
