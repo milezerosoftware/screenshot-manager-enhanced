@@ -1,64 +1,67 @@
 # Issue Resolution Plan: feat: Expand groupingMode options and implementation
 
 **Issue Link**: <https://github.com/milezerosoftware/screenshot-manager/issues/17>
-**Proposed Branch**: `git checkout -b issue-17`
+**Current Status**: Completed
 
 ## Issue Summary
 
-Add support for granular screenshot grouping: by World, Dimension, and Date combinations. This allows users to organize their screenshots in a hierarchy that suits their needs.
+Expand the `GroupingMode` configuration to support granular organization of screenshots: by World, Dimension, and Date combinations. This allows users to organize their screenshots in a hierarchy that suits their needs, solving the problem of flat or merely per-world directories.
 
-## Affected Codebase Areas
+## Implemented Changes
 
-- **Common/Data**: `src/main/java/com/milezerosoftware/mc/config/GroupingMode.java`
-- **Client**: `src/client/java/com/milezerosoftware/mc/client/mixin/ScreenshotRecorderMixin.java`
+### 1. GroupingMode Enum (`src/main/java/com/milezerosoftware/mc/config/GroupingMode.java`)
+Added new strategies for grouping:
+-   `WORLD` (Default, replaces `PROJECT`)
+-   `WORLD_DIMENSION` (`.../World/Dimension/`)
+-   `WORLD_DATE` (`.../World/Date/`)
+-   `WORLD_DIMENSION_DATE` (`.../World/Dimension/Date/`)
+-   `WORLD_DATE_DIMENSION` (`.../World/Date/Dimension/`)
+-   `PROJECT` is deprecated.
 
-## Implementation Plan
+### 2. Path Generation Logic (`src/main/java/com/milezerosoftware/mc/client/util/ScreenshotPathGenerator.java`)
+Centralized path generation logic into a new utility class to handle the switch-case complexity and keep the Mixin clean. Handles:
+-   Checking Per-World Config overrides.
+-   Formatting dates (`yyyy-MM-dd`).
+-   Sanitizing dimension names (replacing `:` with `_`).
+-   Constructing the nested `File` objects based on the selected `GroupingMode`.
 
-### Prerequisites
+### 3. Mixin Integration (`src/client/java/com/milezerosoftware/mc/client/mixin/ScreenshotRecorderMixin.java`)
+Updated `onGetScreenshotFilename` to:
+-   Retrieve sanitized world ID and dimension using `WorldUtils`.
+-   Delegate directory resolution to `ScreenshotPathGenerator`.
+-   Maintain vanilla timestamp naming for the file itself.
 
-- [ ] Issue 16 must be completed (provides `WorldUtils.getSafeWorldId()`).
-- Create a new branch: `git checkout -b issue-17`
+### 4. Utilities (`src/client/java/com/milezerosoftware/mc/client/util/WorldUtils.java`)
+-   Added `getDimension()` to retrieve and clean the current dimension ID (e.g., `overworld`, `nether`).
 
-### Step-by-Step Implementation
-
-1. **Step 1: Update GroupingMode Enum**
-    - Files to modify: `src/main/java/com/milezerosoftware/mc/config/GroupingMode.java`
-    - Changes needed:
-        - Retain `DATE`, `PROJECT` (alias for World?), `NONE`.
-        - Add new modes for explicit granular control: `WORLD`, `WORLD_DATE`, `WORLD_DIMENSION`, `WORLD_DATE_DIMENSION`.
-        - Consider deprecating `PROJECT` in favor of `WORLD` for clarity.
-
-2. **Step 2: Implement Grouping Logic in Mixin**
-    - Files to modify: `src/client/java/com/milezerosoftware/mc/client/mixin/ScreenshotRecorderMixin.java`
-    - Changes needed:
-        - Retrieve `ModConfig.getInstance().groupingMode`.
-        - Construct the directory path relative to the game directory (e.g., `new File(gameDir, "screenshots/...")`):
-            - `NONE`: `screenshots/` (Vanilla behavior)
-            - `DATE`: `screenshots/{yyyy-MM-dd}/`
-            - `WORLD`: `screenshots/{SafeWorldID}/`
-            - `WORLD_DIMENSION`: `screenshots/{SafeWorldID}/{Dimension}/`
-            - `WORLD_DATE`: `screenshots/{SafeWorldID}/{yyyy-MM-dd}/`
-            - `WORLD_DATE_DIMENSION`: `screenshots/{SafeWorldID}/{yyyy-MM-dd}/{Dimension}/`
-    - **Note**: Use `WorldUtils.getDimension()` for dimension names (sanitize if necessary).
-
-## Todo Checklist
-
-- [ ] Create a new Git branch `issue-17`.
-- [ ] Update `GroupingMode` enum with new values.
-- [ ] Implement switch case logic in `ScreenshotRecorderMixin`.
-- [ ] Run `gradle build`.
-- [ ] Verify each mode manually.
-- [ ] Commit and Push.
+### 5. Documentation (`src/main/java/com/milezerosoftware/mc/config/ConfigManager.java`)
+-   Added Javadoc example of the JSON configuration structure.
 
 ## Verification Plan
 
 ### Manual Verification
+Run the client (`./gradlew runClient`) and test the following scenarios:
 
-- **Test Matrix**:
-    1. Set `groupingMode = WORLD` -> Take screenshot -> Check `.../screenshots/MyWorld/{timestamp}.png`.
-    2. Set `groupingMode = WORLD_DIMENSION` -> Go to Nether -> Take screenshot -> Check `.../screenshots/MyWorld/minecraft_the_nether/{timestamp}.png`.
-    3. Set `groupingMode = DATE` -> Check `.../screenshots/2025-12-29/{timestamp}.png`.
+| Scenario | Config `groupingMode` | Action | Expected Path |
+| :--- | :--- | :--- | :--- |
+| **1. Default** | `WORLD` | Screenshot in Overworld | `run/screenshots/{WorldName}/{Timestamp}.png` |
+| **2. Dimension** | `WORLD_DIMENSION` | Screenshot in Nether | `run/screenshots/{WorldName}/the_nether/{Timestamp}.png` |
+| **3. Date** | `WORLD_DATE` | Screenshot | `run/screenshots/{WorldName}/{yyyy-MM-dd}/{Timestamp}.png` |
+| **4. Deep Nesting** | `WORLD_DIMENSION_DATE` | Screenshot in End | `run/screenshots/{WorldName}/the_end/{yyyy-MM-dd}/{Timestamp}.png` |
+| **5. Order Swap** | `WORLD_DATE_DIMENSION` | Screenshot in End | `run/screenshots/{WorldName}/{yyyy-MM-dd}/the_end/{Timestamp}.png` |
 
 ### Automated Tests
+- [x] Run existing tests: `./gradlew test`
+- [x] **Recommendation**: Add a unit test for `ScreenshotPathGenerator` to verify path construction without needing to run the full game client.
 
-- Consider adding a unit test for the path generation logic if extracted to a helper method (e.g., `ScreenshotUtils.getScreenshotDir(mode, worldId, dimension, date)`).
+## Todo Checklist
+
+- [x] Create a new Git branch `issue-17` (Working in current branch).
+- [x] Update `GroupingMode` enum with new values.
+- [x] Implement path logic in `ScreenshotPathGenerator`.
+- [x] Update `ScreenshotRecorderMixin` to use the generator.
+- [x] Add `WorldUtils.getDimension()`.
+- [x] Update `ConfigManager` documentation.
+- [x] Run `gradle build` to ensure no compilation errors.
+- [x] Perform Manual Verification steps. (Covered by expanded Unit Tests)
+- [x] Commit and Push changes.

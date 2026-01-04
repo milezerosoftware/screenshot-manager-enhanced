@@ -13,11 +13,31 @@ import java.nio.file.Path;
 
 /**
  * Manages the persistence of the {@link ModConfig}.
+ * <p>
+ * Configuration is stored in <code>config/screenshotmanager.json</code>.
+ * Example structure:
+ * 
+ * <pre>
+ * {
+ *   "enableMetadata": true,
+ *   "groupingMode": "WORLD",
+ *   "worldRules": {
+ *     "My Multiplayer Server": {
+ *       "customPath": "",
+ *       "active": true
+ *     },
+ *     "Singleplayer World": {
+ *       "active": false
+ *     }
+ *   }
+ * }
+ * </pre>
  */
 public class ConfigManager {
 
     private static final String CONFIG_FILE_NAME = "screenshotmanager.json";
     private static ModConfig instance;
+    private static long lastModified = -1;
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static final Logger LOGGER = LoggerFactory.getLogger("screenshot-manager");
 
@@ -32,10 +52,28 @@ public class ConfigManager {
      * @return The active ModConfig.
      */
     public static synchronized ModConfig getInstance() {
-        if (instance == null) {
+        if (instance == null || hasConfigChangedOnDisk()) {
             load();
         }
         return instance;
+    }
+
+    private static Path getDefaultConfigPath() {
+        return FabricLoader.getInstance().getConfigDir().resolve(CONFIG_FILE_NAME);
+    }
+
+    private static boolean hasConfigChangedOnDisk() {
+        try {
+            Path path = getDefaultConfigPath();
+            if (Files.exists(path)) {
+                long currentModified = Files.getLastModifiedTime(path).toMillis();
+                return currentModified > lastModified;
+            }
+        } catch (Exception e) {
+            // If we can't check (e.g. FabricLoader not available in tests), assume no
+            // change
+        }
+        return false;
     }
 
     /**
@@ -44,7 +82,7 @@ public class ConfigManager {
      * and saved.
      */
     public static synchronized void load() {
-        load(FabricLoader.getInstance().getConfigDir().resolve(CONFIG_FILE_NAME));
+        load(getDefaultConfigPath());
     }
 
     /**
@@ -57,6 +95,7 @@ public class ConfigManager {
             try {
                 String json = Files.readString(configFile);
                 instance = GSON.fromJson(json, ModConfig.class);
+                lastModified = Files.getLastModifiedTime(configFile).toMillis();
 
                 // Fix for infinite recursion on empty file
                 if (instance == null) {
@@ -74,10 +113,16 @@ public class ConfigManager {
                     LOGGER.error("Failed to backup broken config", copyEx);
                 }
                 instance = new ModConfig();
+                lastModified = System.currentTimeMillis(); // Prevent constant reloading of broken file
             }
         } else {
             instance = new ModConfig();
             save(configFile);
+            try {
+                lastModified = Files.getLastModifiedTime(configFile).toMillis();
+            } catch (IOException e) {
+                lastModified = System.currentTimeMillis();
+            }
         }
     }
 
@@ -85,7 +130,7 @@ public class ConfigManager {
      * Saves the current configuration to disk.
      */
     public static synchronized void save() {
-        save(FabricLoader.getInstance().getConfigDir().resolve(CONFIG_FILE_NAME));
+        save(getDefaultConfigPath());
     }
 
     /**
@@ -100,6 +145,7 @@ public class ConfigManager {
         try {
             String json = GSON.toJson(instance);
             Files.writeString(configFile, json);
+            lastModified = Files.getLastModifiedTime(configFile).toMillis();
         } catch (IOException e) {
             LOGGER.error("Failed to save Screenshot Manager config: {}", e.getMessage());
         }
