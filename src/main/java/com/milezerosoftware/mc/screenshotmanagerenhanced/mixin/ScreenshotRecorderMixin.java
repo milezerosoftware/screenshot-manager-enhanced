@@ -1,4 +1,4 @@
-package com.milezerosoftware.mc.mixin;
+package com.milezerosoftware.mc.screenshotmanagerenhanced.mixin;
 
 import net.minecraft.server.MinecraftServer;
 import org.spongepowered.asm.mixin.Mixin;

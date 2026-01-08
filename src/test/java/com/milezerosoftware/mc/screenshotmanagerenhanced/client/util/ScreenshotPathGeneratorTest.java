@@ -1,8 +1,8 @@
-package com.milezerosoftware.mc.client.util;
+package com.milezerosoftware.mc.screenshotmanagerenhanced.client.util;
 
-import com.milezerosoftware.mc.config.GroupingMode;
-import com.milezerosoftware.mc.config.ModConfig;
-import com.milezerosoftware.mc.config.WorldConfig;
+import com.milezerosoftware.mc.screenshotmanagerenhanced.config.GroupingMode;
+import com.milezerosoftware.mc.screenshotmanagerenhanced.config.ModConfig;
+import com.milezerosoftware.mc.screenshotmanagerenhanced.config.WorldConfig;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;

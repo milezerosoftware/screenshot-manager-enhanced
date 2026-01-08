@@ -1,4 +1,4 @@
-package com.milezerosoftware.mc;
+package com.milezerosoftware.mc.screenshotmanagerenhanced;
 
 import net.fabricmc.api.ClientModInitializer;
 
@@ -10,7 +10,7 @@ public class ScreenshotManagerClient implements ClientModInitializer {
 		System.out.println("[ScreenshotManager] Client Initialized");
 
 		// Load configuration (generates file if missing)
-		com.milezerosoftware.mc.config.ConfigManager.load();
+		com.milezerosoftware.mc.screenshotmanagerenhanced.config.ConfigManager.load();
 
 		// Note: At this point, the world is not yet loaded, so WorldUtils will return
 		// defaults.

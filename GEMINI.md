@@ -1,8 +1,12 @@
-# Screenshot Manager (Fabric Mod)
+# User Persona
+
+You are a senior software engineer. You don't do anything halfass. You allow for high quality and precise implementation.
+
+# Screenshot Manager Enhanced (Fabric Mod)
 
 ## Project Overview
 
-**Screenshot Manager** is a Minecraft Mod built for the **Fabric** loader. Its intended purpose is to manage screenshot
+**Screenshot Manager Enhanced** is a Minecraft Mod built for the **Fabric** loader. Its intended purpose is to manage screenshot
 storage locations dynamically based on the current world or server (per-world basis).
 
 * **Current State:** Prototype. The basic infrastructure is in place to intercept screenshot saving, but the dynamic
@@ -14,8 +18,8 @@ storage locations dynamically based on the current world or server (per-world ba
 
 ### Entry Points
 
-* **Main:** `com.milezerosoftware.mc.ModInitializerImpl` - Standard Fabric initialization.
-* **Client:** `com.milezerosoftware.mc.ScreenshotManagerClient` - Client-side initialization.
+* **Main:** `com.milezerosoftware.mc.screenshotmanagerenhanced.ModInitializerImpl` - Standard Fabric initialization.
+* **Client:** `com.milezerosoftware.mc.screenshotmanagerenhanced.ScreenshotManagerClient` - Client-side initialization.
 
 ### Core Logic
 
@@ -33,7 +37,14 @@ storage locations dynamically based on the current world or server (per-world ba
 * **Mixin:** `com.milezerosoftware.mc.client.mixin.ScreenshotRecorderMixin`
   * Injects into `net.minecraft.client.util.ScreenshotRecorder.getScreenshotFilename`.
   * Currently redirects all screenshots to a path defined in `ModConfig` (defaulting to a subfolder).
-* **Configuration:** `com.milezerosoftware.mc.config.ModConfig`
+| Package     | Package Path                            | Responsibility                                                      |
+|-------------|-----------------------------------------|---------------------------------------------------------------------|
+| Data Models | `com.milezerosoftware.mc.screenshotmanagerenhanced.config`        | POJO classes for global and per-world settings.                     |
+| Logic       | `com.milezerosoftware.mc.screenshotmanagerenhanced.client.util`   | Extracting world data (coordinates, days) and PNG metadata writing. |
+| Integration | `com.milezerosoftware.mc.screenshotmanagerenhanced.client.mixin`  | Intercepting the screenshot process.                                |
+| UI          | `com.milezerosoftware.mc.screenshotmanagerenhanced.client.compat` | ModMenu and Cloth Config screens.                                   |
+
+* **Mixin:** `com.milezerosoftware.mc.screenshotmanagerenhanced.client.mixin.ScreenshotRecorderMixin`
   * Currently a singleton stub.
   * **TODO:** Implement integration with Cloth Config (dependency is already added) and dynamic path resolution logic.
 
@@ -88,13 +99,13 @@ Defined in `build.gradle`:
 
 ## Key Files
 
-* `src/main/resources/fabric.mod.json`: Mod metadata (ID: `screenshotmanager`).
-* `src/client/java/com/milezerosoftware/mc/client/mixin/ScreenshotRecorderMixin.java`: Screenshot redirection logic.
-* `src/main/java/com/milezerosoftware/mc/config/ModConfig.java`: Configuration holder.
+* `src/main/resources/fabric.mod.json`: Mod metadata (ID: `screenshot-manager-enhanced`).
+* `src/client/java/com/milezerosoftware/mc/screenshotmanagerenhanced/client/mixin/ScreenshotRecorderMixin.java`: Screenshot redirection logic.
+* `src/main/java/com/milezerosoftware/mc/screenshotmanagerenhanced/config/ModConfig.java`: Configuration holder.
 
 ## Development Notes
 
 * **Per-World Logic:** The description claims per-world support, but the code currently only uses a static `customPath`.
   Logic needs to be added to detect the current world/server context.
-* **Mixins:** Defined in `screenshotmanager.mixins.json` (common) and `screenshotmanager.client.mixins.json` (
+* **Mixins:** Defined in `screenshot-manager-enhanced.mixins.json` (common) and `screenshot-manager-enhanced.client.mixins.json` (
   client-only).

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "id": "screenshotmanager",
+  "id": "screenshot-manager-enhanced",
   "version": "${version}",
-  "name": "Screenshot Manager",
+  "name": "Screenshot Manager Enhanced",
   "description": "A advanced screenshot manager to help organize your screenshots between different worlds, dimensions, and game modes. Works in single player and multiplayer",
   "authors": [
     "Scriptmunkee"
@@ -17,19 +17,19 @@
   "environment": "client",
   "entrypoints": {
     "main": [
-      "com.milezerosoftware.mc.ModInitializerImpl"
+      "com.milezerosoftware.mc.screenshotmanagerenhanced.ModInitializerImpl"
     ],
     "client": [
-      "com.milezerosoftware.mc.ScreenshotManagerClient"
+      "com.milezerosoftware.mc.screenshotmanagerenhanced.ScreenshotManagerClient"
     ],
     "modmenu": [
-      "com.milezerosoftware.mc.client.compat.ModMenuIntegration"
+      "com.milezerosoftware.mc.screenshotmanagerenhanced.client.compat.ModMenuIntegration"
     ]
   },
   "mixins": [
-    "screenshotmanager.mixins.json",
+    "screenshot-manager-enhanced.mixins.json",
     {
-      "config": "screenshotmanager.client.mixins.json",
+      "config": "screenshot-manager-enhanced.client.mixins.json",
       "environment": "client"
     }
   ],

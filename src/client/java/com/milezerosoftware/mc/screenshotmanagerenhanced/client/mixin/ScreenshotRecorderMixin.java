@@ -1,9 +1,9 @@
-package com.milezerosoftware.mc.client.mixin;
+package com.milezerosoftware.mc.screenshotmanagerenhanced.client.mixin;
 
-import com.milezerosoftware.mc.client.util.ScreenshotPathGenerator;
-import com.milezerosoftware.mc.client.util.WorldUtils;
-import com.milezerosoftware.mc.config.ConfigManager;
-import com.milezerosoftware.mc.config.ModConfig;
+import com.milezerosoftware.mc.screenshotmanagerenhanced.client.util.ScreenshotPathGenerator;
+import com.milezerosoftware.mc.screenshotmanagerenhanced.client.util.WorldUtils;
+import com.milezerosoftware.mc.screenshotmanagerenhanced.config.ConfigManager;
+import com.milezerosoftware.mc.screenshotmanagerenhanced.config.ModConfig;
 import net.minecraft.client.util.ScreenshotRecorder;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;

@@ -1,4 +1,4 @@
-package com.milezerosoftware.mc;
+package com.milezerosoftware.mc.screenshotmanagerenhanced;
 
 import net.fabricmc.api.ModInitializer;
 

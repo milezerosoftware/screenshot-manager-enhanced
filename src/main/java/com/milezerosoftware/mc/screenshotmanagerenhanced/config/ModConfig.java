@@ -1,4 +1,4 @@
-package com.milezerosoftware.mc.config;
+package com.milezerosoftware.mc.screenshotmanagerenhanced.config;
 
 import java.util.HashMap;
 import java.util.Map;

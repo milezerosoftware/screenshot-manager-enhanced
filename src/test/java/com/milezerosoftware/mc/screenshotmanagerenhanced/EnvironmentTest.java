@@ -1,4 +1,4 @@
-package com.milezerosoftware.mc;
+package com.milezerosoftware.mc.screenshotmanagerenhanced;
 
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertTrue;
