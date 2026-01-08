@@ -13,7 +13,7 @@
     "issues": "https://github.com/milezerosoftware/screenshot-manager/issues"
   },
   "license": "Apache-2.0",
-  "icon": "assets/screenshot-manager/icon.png",
+  "icon": "assets/screenshot-manager-enhanced/icon.png",
   "environment": "client",
   "entrypoints": {
     "main": [
@@ -27,7 +27,6 @@
     ]
   },
   "mixins": [
-    "screenshot-manager-enhanced.mixins.json",
     {
       "config": "screenshot-manager-enhanced.client.mixins.json",
       "environment": "client"
