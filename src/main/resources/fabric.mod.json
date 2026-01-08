@@ -3,15 +3,16 @@
   "id": "screenshotmanager",
   "version": "${version}",
   "name": "Screenshot Manager",
-  "description": "A advanced mod to manage where screenshots are saved on a per-world basis. Works for solo worlds and multiplayer servers",
+  "description": "A advanced screenshot manager to help organize your screenshots between different worlds, dimensions, and game modes. Works in single player and multiplayer",
   "authors": [
     "Scriptmunkee"
   ],
   "contact": {
-    "homepage": "https://fabricmc.net/",
-    "sources": "https://github.com/milezerosoftware/screenshot-manager"
+    "homepage": "https://modrinth.com/project/screenshot-manager-enhanced",
+    "sources": "https://github.com/milezerosoftware/screenshot-manager",
+    "issues": "https://github.com/milezerosoftware/screenshot-manager/issues"
   },
-  "license": "CC0-1.0",
+  "license": "Apache-2.0",
   "icon": "assets/screenshot-manager/icon.png",
   "environment": "client",
   "entrypoints": {
