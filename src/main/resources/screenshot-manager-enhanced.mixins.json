@@ -1,8 +1,10 @@
 {
   "required": true,
-  "package": "com.milezerosoftware.mc.screenshotmanagerenhanced.client.mixin",
+  "package": "com.milezerosoftware.mc.screenshotmanagerenhanced.mixin",
   "compatibilityLevel": "JAVA_21",
-  "mixins": [],
+  "mixins": [
+    "ScreenshotRecorderMixin"
+  ],
   "injectors": {
     "defaultRequire": 1
   },
