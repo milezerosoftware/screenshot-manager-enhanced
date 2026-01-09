@@ -1,8 +1,12 @@
 ![Banner image for Screenshot Manager Enhanced](resources/media/main_banner.png)
 
-## A mod designed to keep your Minecraft screenshots organized automatically. Say goodbye to a cluttered **screenshots** folder! This mod intelligently sorts your screenshots into folders based on the world, dimension, date, or a combination of these.
+![License](https://img.shields.io/badge/license-Apache%202.0-blue)
+![Fabric](https://img.shields.io/badge/modloader-Fabric-fee6ad)
+![Minecraft](https://img.shields.io/badge/minecraft-1.21.1-lightgrey)
 
-### ✨ Features
+A mod designed to keep your Minecraft screenshots organized automatically. Say goodbye to a cluttered **screenshots** folder! This mod intelligently sorts your screenshots into folders based on the world, dimension, date, or a combination of these.
+
+## ✨ Features
 
 * **Automatic Organization**: Screenshots are instantly sorted into subfolders upon capture.
 * **Per-World Configuration**: Customize settings for you single-player or specific server worlds.
@@ -28,7 +32,7 @@
 * **Metadata Support**: Optional metadata saving (configurable).
 * **In-Game Config**: Fully configurable via [Mod Menu](https://modrinth.com/mod/modmenu) and [Cloth Config](https://modrinth.com/mod/cloth-config).
 
-### 📥 Installation
+## 📥 Installation
 
 #### Option 1: Modrinth (Recommended)
 
@@ -63,11 +67,7 @@ To change the settings:
 4. **Global Settings**: default behavior for all worlds.
 5. **World Overrides**: Add specifics for your favorite servers or worlds *(Coming Soon)*.
 
-### 🤝 Contributing
-
-![License](https://img.shields.io/badge/license-Apache%202.0-blue)
-![Fabric](https://img.shields.io/badge/modloader-Fabric-fee6ad)
-![Minecraft](https://img.shields.io/badge/minecraft-1.21.1-lightgrey)
+## 🤝 Contributing
 
 We welcome contributions! If you're interested in helping improve Screenshot Manager Enhanced:
 
@@ -82,4 +82,3 @@ Please report any bugs or feature requests on the [Issue Tracker](https://github
 ## 📄 License
 
 This project is licensed under the [Apache-2.0 License](LICENSE).
-
