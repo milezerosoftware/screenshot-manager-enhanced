@@ -9,8 +9,8 @@
   ],
   "contact": {
     "homepage": "https://modrinth.com/project/screenshot-manager-enhanced",
-    "sources": "https://github.com/milezerosoftware/screenshot-manager",
-    "issues": "https://github.com/milezerosoftware/screenshot-manager/issues"
+    "sources": "https://github.com/milezerosoftware/screenshot-manager-enhanced",
+    "issues": "https://github.com/milezerosoftware/screenshot-manager-enhanced/issues"
   },
   "license": "Apache-2.0",
   "icon": "assets/screenshot-manager-enhanced/icon.png",
