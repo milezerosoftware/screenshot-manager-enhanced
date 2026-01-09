@@ -1,8 +1,8 @@
 ![Banner image for Screenshot Manager Enhanced](resources/media/main_banner.png)
 
-A Fabric mod designed to keep your Minecraft screenshots organized automatically. Say goodbye to a cluttered **screenshots** folder! This mod intelligently sorts your screenshots into folders based on the world, dimension, date, or a combination of these.
+## A mod designed to keep your Minecraft screenshots organized automatically. Say goodbye to a cluttered **screenshots** folder! This mod intelligently sorts your screenshots into folders based on the world, dimension, date, or a combination of these.
 
-## ✨ Features
+### ✨ Features
 
 * **Automatic Organization**: Screenshots are instantly sorted into subfolders upon capture.
 * **Per-World Configuration**: Customize settings for you single-player or specific server worlds.
@@ -23,14 +23,14 @@ A Fabric mod designed to keep your Minecraft screenshots organized automatically
   * **`NONE`**: Disables grouping. Screenshots are saved directly in the screenshots folder (standard Minecraft behavior).
     * Example: `screenshots/`
 
-### *Coming Soon!*
+#### *Coming Soon!*
 
 * **Metadata Support**: Optional metadata saving (configurable).
 * **In-Game Config**: Fully configurable via [Mod Menu](https://modrinth.com/mod/modmenu) and [Cloth Config](https://modrinth.com/mod/cloth-config).
 
-## 📥 Installation
+### 📥 Installation
 
-### Option 1: Modrinth (Recommended)
+#### Option 1: Modrinth (Recommended)
 
 The easiest way to install **Screenshot Manager Enhanced** is through the Modrinth Launcher or Download from the Modrinth website.
 
@@ -38,7 +38,7 @@ The easiest way to install **Screenshot Manager Enhanced** is through the Modrin
 2. Click **Install** (if using the app) or download the version matching your Minecraft instance.
 3. Ensure you have the required dependencies installed.
 
-### Option 2: Manual Install (GitHub)
+#### Option 2: Manual Install (GitHub)
 
 For those who prefer the manual route:
 
@@ -51,7 +51,7 @@ For those who prefer the manual route:
 4. **Install**: Drop the `.jar` files into your `.minecraft/mods` folder.
 5. **Launch**: Start Minecraft and enjoy organized screenshots!
 
-## ⚙️ Usage & Configuration
+### ⚙️ Usage & Configuration
 
 Once installed, the mod works automatically with the default setting (Group by `WORLD`).
 
@@ -63,7 +63,7 @@ To change the settings:
 4. **Global Settings**: default behavior for all worlds.
 5. **World Overrides**: Add specifics for your favorite servers or worlds *(Coming Soon)*.
 
-## 🤝 Contributing
+### 🤝 Contributing
 
 ![License](https://img.shields.io/badge/license-Apache%202.0-blue)
 ![Fabric](https://img.shields.io/badge/modloader-Fabric-fee6ad)
