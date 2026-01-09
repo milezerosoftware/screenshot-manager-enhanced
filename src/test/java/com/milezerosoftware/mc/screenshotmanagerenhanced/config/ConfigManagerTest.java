@@ -1,4 +1,4 @@
-package com.milezerosoftware.mc.config;
+package com.milezerosoftware.mc.screenshotmanagerenhanced.config;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;

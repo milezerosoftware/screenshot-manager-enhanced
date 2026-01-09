@@ -1,4 +1,4 @@
-package com.milezerosoftware.mc.config;
+package com.milezerosoftware.mc.screenshotmanagerenhanced.config;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -35,11 +35,11 @@ import java.nio.file.Path;
  */
 public class ConfigManager {
 
-    private static final String CONFIG_FILE_NAME = "screenshotmanager.json";
+    private static final String CONFIG_FILE_NAME = "screenshot-manager-enhanced.json";
     private static ModConfig instance;
     private static long lastModified = -1;
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
-    private static final Logger LOGGER = LoggerFactory.getLogger("screenshot-manager");
+    private static final Logger LOGGER = LoggerFactory.getLogger("screenshot-manager-enhanced");
 
     private ConfigManager() {
         // Private constructor to enforce Singleton usage

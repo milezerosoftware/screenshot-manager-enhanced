@@ -1,6 +1,6 @@
-package com.milezerosoftware.mc.client.compat;
+package com.milezerosoftware.mc.screenshotmanagerenhanced.client.compat;
 
-import com.milezerosoftware.mc.config.ConfigManager;
+import com.milezerosoftware.mc.screenshotmanagerenhanced.config.ConfigManager;
 import com.terraformersmc.modmenu.api.ConfigScreenFactory;
 import com.terraformersmc.modmenu.api.ModMenuApi;
 import me.shedaniel.clothconfig2.api.ConfigBuilder;

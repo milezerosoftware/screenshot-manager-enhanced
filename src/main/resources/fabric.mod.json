@@ -1,35 +1,31 @@
 {
   "schemaVersion": 1,
-  "id": "screenshotmanager",
+  "id": "screenshot-manager-enhanced",
   "version": "${version}",
-  "name": "Screenshot Manager",
+  "name": "Screenshot Manager Enhanced",
   "description": "A advanced screenshot manager to help organize your screenshots between different worlds, dimensions, and game modes. Works in single player and multiplayer",
   "authors": [
     "Scriptmunkee"
   ],
   "contact": {
     "homepage": "https://modrinth.com/project/screenshot-manager-enhanced",
-    "sources": "https://github.com/milezerosoftware/screenshot-manager",
-    "issues": "https://github.com/milezerosoftware/screenshot-manager/issues"
+    "sources": "https://github.com/milezerosoftware/screenshot-manager-enhanced",
+    "issues": "https://github.com/milezerosoftware/screenshot-manager-enhanced/issues"
   },
   "license": "Apache-2.0",
-  "icon": "assets/screenshot-manager/icon.png",
+  "icon": "assets/screenshot-manager-enhanced/icon.png",
   "environment": "client",
   "entrypoints": {
     "main": [
-      "com.milezerosoftware.mc.ModInitializerImpl"
+      "com.milezerosoftware.mc.screenshotmanagerenhanced.ModInitializerImpl"
     ],
     "client": [
-      "com.milezerosoftware.mc.ScreenshotManagerClient"
-    ],
-    "modmenu": [
-      "com.milezerosoftware.mc.client.compat.ModMenuIntegration"
+      "com.milezerosoftware.mc.screenshotmanagerenhanced.ScreenshotManagerClient"
     ]
   },
   "mixins": [
-    "screenshotmanager.mixins.json",
     {
-      "config": "screenshotmanager.client.mixins.json",
+      "config": "screenshot-manager-enhanced.client.mixins.json",
       "environment": "client"
     }
   ],

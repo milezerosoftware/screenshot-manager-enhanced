@@ -1,4 +1,4 @@
-package com.milezerosoftware.mc.config;
+package com.milezerosoftware.mc.screenshotmanagerenhanced.config;
 
 /**
  * Defines the strategy for grouping screenshots in the file system.

@@ -1,4 +1,4 @@
-package com.milezerosoftware.mc.config;
+package com.milezerosoftware.mc.screenshotmanagerenhanced.config;
 
 /**
  * Configuration settings specific to a single world or server.

@@ -1,4 +1,4 @@
-package com.milezerosoftware.mc.client.util;
+package com.milezerosoftware.mc.screenshotmanagerenhanced.client.util;
 
 import net.minecraft.client.MinecraftClient;
 
