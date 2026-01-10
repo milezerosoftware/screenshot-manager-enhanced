@@ -81,15 +81,30 @@ Please report any bugs or feature requests on the [Issue Tracker](https://github
 
 ## 🚀 Release Process
 
-To create a new release:
+We support two ways to cut a release: **Automated** (Recommended) and **Manual**.
+
+### Option 1: Automated (GitHub Actions)
 
 1. Update `mod_version` in `gradle.properties` (e.g., `1.0.0`).
-2. Commit and push the changes.
-3. Create a new GitHub Release as a draft with a tag matching the version (e.g., `v1.0.0`).
-4. The GitHub Action will automatically build and upload the release JAR.
+2. Commit the change: `git commit -am "chore: bump version to 1.0.0"`.
+3. Tag the commit: `git tag v1.0.0`.
+4. Push the tag: `git push origin v1.0.0`.
+5. The GitHub Action will automatically:
+    * Build the project.
+    * Create a GitHub Release named `v1.0.0`.
+    * Attach the built JAR file.
+
+### Option 2: Manual (CLI)
+
+You can create a GitHub release directly from your terminal if you have a `GITHUB_TOKEN`.
+
+```bash
+export GITHUB_TOKEN=your_token_here
+./gradlew githubRelease
+```
 
 > [!IMPORTANT]
-> The tag name must match the `mod_version` in `gradle.properties` (ignoring the `v` prefix). If they do not match, the build will fail.
+> Ensure the git tag matches the `mod_version` in `gradle.properties` to avoid confusion.
 
 ## 📄 License
 

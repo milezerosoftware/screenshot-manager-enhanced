@@ -1,7 +1,8 @@
 name: release
 on:
-  release:
-    types: [published]
+  push:
+    tags:
+      - 'v*'
 
 jobs:
   release:
@@ -18,25 +19,7 @@ jobs:
           distribution: 'microsoft'
       - name: make gradle wrapper executable
         run: chmod +x ./gradlew
-      - name: verify version
-        run: |
-          # Extract version from tag (remove 'v' prefix if present)
-          TAG_VERSION="${GITHUB_REF_NAME#v}"
-          
-          # Extract version from gradle.properties
-          GRADLE_VERSION=$(grep "mod_version=" gradle.properties | cut -d'=' -f2 | tr -d '[:space:]')
-          
-          echo "Tag Version: $TAG_VERSION"
-          echo "Gradle Version: $GRADLE_VERSION"
-          
-          if [ "$TAG_VERSION" != "$GRADLE_VERSION" ]; then
-            echo "::error::Tag version ($TAG_VERSION) does not match gradle.properties version ($GRADLE_VERSION)"
-            exit 1
-          fi
-      - name: build
-        run: ./gradlew build
-      - name: upload release asset
+      - name: create release
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release upload ${{ github.event.release.tag_name }} build/libs/*.jar
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ./gradlew githubRelease
