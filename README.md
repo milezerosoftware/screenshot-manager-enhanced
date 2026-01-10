@@ -85,7 +85,7 @@ To create a new release:
 
 1. Update `mod_version` in `gradle.properties` (e.g., `1.0.0`).
 2. Commit and push the changes.
-3. Create a new GitHub Release with a tag matching the version (e.g., `v1.0.0`).
+3. Create a new GitHub Release as a draft with a tag matching the version (e.g., `v1.0.0`).
 4. The GitHub Action will automatically build and upload the release JAR.
 
 > [!IMPORTANT]
