@@ -79,6 +79,18 @@ We welcome contributions! If you're interested in helping improve Screenshot Man
 
 Please report any bugs or feature requests on the [Issue Tracker](https://github.com/milezerosoftware/screenshot-manager-enhanced/issues).
 
+## 🚀 Release Process
+
+To create a new release:
+
+1. Update `mod_version` in `gradle.properties` (e.g., `1.0.0`).
+2. Commit and push the changes.
+3. Create a new GitHub Release with a tag matching the version (e.g., `v1.0.0`).
+4. The GitHub Action will automatically build and upload the release JAR.
+
+> [!IMPORTANT]
+> The tag name must match the `mod_version` in `gradle.properties` (ignoring the `v` prefix). If they do not match, the build will fail.
+
 ## 📄 License
 
 This project is licensed under the [Apache-2.0 License](LICENSE).
