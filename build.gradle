@@ -6,7 +6,8 @@ plugins {
 def getVersionSuffix() {
 	// CI Environment
 	if (System.getenv("GITHUB_ACTIONS")) {
-		if (System.getenv("GITHUB_REF") == "refs/heads/main") {
+		def ref = System.getenv("GITHUB_REF")
+		if (ref == "refs/heads/main" || (ref != null && ref.startsWith("refs/tags/"))) {
 			return ""
 		}
 		return "-SNAPSHOT"

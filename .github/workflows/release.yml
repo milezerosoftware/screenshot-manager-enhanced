@@ -1,0 +1,42 @@
+name: release
+on:
+  release:
+    types: [published]
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v4
+      - name: validate gradle wrapper
+        uses: gradle/actions/wrapper-validation@v4
+      - name: setup jdk
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'microsoft'
+      - name: make gradle wrapper executable
+        run: chmod +x ./gradlew
+      - name: verify version
+        run: |
+          # Extract version from tag (remove 'v' prefix if present)
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          
+          # Extract version from gradle.properties
+          GRADLE_VERSION=$(grep "mod_version=" gradle.properties | cut -d'=' -f2 | tr -d '[:space:]')
+          
+          echo "Tag Version: $TAG_VERSION"
+          echo "Gradle Version: $GRADLE_VERSION"
+          
+          if [ "$TAG_VERSION" != "$GRADLE_VERSION" ]; then
+            echo "::error::Tag version ($TAG_VERSION) does not match gradle.properties version ($GRADLE_VERSION)"
+            exit 1
+          fi
+      - name: build
+        run: ./gradlew build
+      - name: upload release asset
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload ${{ github.event.release.tag_name }} build/libs/*.jar
