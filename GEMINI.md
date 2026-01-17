@@ -1,20 +1,43 @@
-# User Persona
+# Context: Screenshot Manager Enhanced
+
+## Identity
 
 You are a senior software engineer. You don't do anything halfass. You allow for high quality and precise implementation.
 
-# Screenshot Manager Enhanced (Fabric Mod)
-
 ## Project Overview
 
-**Screenshot Manager Enhanced** is a Minecraft Mod built for the **Fabric** loader. Its intended purpose is to manage screenshot
-storage locations dynamically based on the current world or server (per-world basis).
+**Screenshot Manager Enhanced** is a Minecraft Mod built for the **Fabric** loader. Its intended purpose is to manage screenshot storage locations dynamically based on the current world or server (per-world basis).
 
-* **Current State:** Prototype. The basic infrastructure is in place to intercept screenshot saving, but the dynamic
-  per-world logic and configuration persistence are not yet implemented.
+* **Current State:** Prototype. The basic infrastructure is in place to intercept screenshot saving. Dynamic per-world logic is being implemented, and GroupingMode expansion is complete.
 * **Language:** Java 21
 * **Build System:** Gradle (using Fabric Loom)
 
-## Architecture
+### Development Notes
+
+* **Per-World Logic:** The description claims per-world support, but the code currently only uses a static `customPath`. Logic needs to be added to detect the current world/server context.
+* **Mixins:** Defined in `screenshot-manager-enhanced.mixins.json` (common) and `screenshot-manager-enhanced.client.mixins.json` (client-only).
+
+## Control Panel
+
+* **Build Mod**: `./gradlew build` (Artifacts in `build/libs/`)
+* **Run Client**: `./gradlew runClient`
+* **Run Tests**: `./gradlew test`
+* **Generate Sources**: `./gradlew genSources`
+
+## Workflows
+
+The following workflows are defined in `.gemini/commands`:
+
+* **Implement**: `gemini implement` (`implement.toml`)
+* **Planning**:
+  * New Plan: `gemini planning new` (`planning/new.toml`)
+* **Issues**:
+  * Create Issue: `gemini issue create` (`issue/create.toml`)
+  * Resolve Issue: `gemini issue resolve` (`issue/resolve.toml`)
+* **Pull Requests**:
+  * Create PR: `gemini pr create` (`pr/create.toml`)
+
+## Architecture & Key Files
 
 ### Entry Points
 
@@ -23,20 +46,8 @@ storage locations dynamically based on the current world or server (per-world ba
 
 ### Core Logic
 
-* **This is important: High-Level Project Architecture**
-  Since your mod targets client-only features (screenshots/UI), almost all logic will live in the client source set,
-  while your data models live in main.
+Since your mod targets client-only features (screenshots/UI), almost all logic will live in the client source set, while your data models live in main.
 
-| Package     | Package Path                            | Responsibility                                                      |
-|-------------|-----------------------------------------|---------------------------------------------------------------------|
-| Data Models | `com.milezerosoftware.mc.config`        | POJO classes for global and per-world settings.                     |
-| Logic       | `com.milezerosoftware.mc.client.util`   | Extracting world data (coordinates, days) and PNG metadata writing. |
-| Integration | `com.milezerosoftware.mc.client.mixin`  | Intercepting the screenshot process.                                |
-| UI          | `com.milezerosoftware.mc.client.compat` | ModMenu and Cloth Config screens.                                   |
-
-* **Mixin:** `com.milezerosoftware.mc.client.mixin.ScreenshotRecorderMixin`
-  * Injects into `net.minecraft.client.util.ScreenshotRecorder.getScreenshotFilename`.
-  * Currently redirects all screenshots to a path defined in `ModConfig` (defaulting to a subfolder).
 | Package     | Package Path                            | Responsibility                                                      |
 |-------------|-----------------------------------------|---------------------------------------------------------------------|
 | Data Models | `com.milezerosoftware.mc.screenshotmanagerenhanced.config`        | POJO classes for global and per-world settings.                     |
@@ -45,42 +56,17 @@ storage locations dynamically based on the current world or server (per-world ba
 | UI          | `com.milezerosoftware.mc.screenshotmanagerenhanced.client.compat` | ModMenu and Cloth Config screens.                                   |
 
 * **Mixin:** `com.milezerosoftware.mc.screenshotmanagerenhanced.client.mixin.ScreenshotRecorderMixin`
+  * Injects into `net.minecraft.client.util.ScreenshotRecorder.getScreenshotFilename`.
   * Currently a singleton stub.
   * **TODO:** Implement integration with Cloth Config (dependency is already added) and dynamic path resolution logic.
 
-## Building and Running
+### Key Files
 
-The project uses the standard Gradle wrapper.
+* `src/main/resources/fabric.mod.json`: Mod metadata (ID: `screenshot-manager-enhanced`).
+* `src/client/java/com/milezerosoftware/mc/screenshotmanagerenhanced/client/mixin/ScreenshotRecorderMixin.java`: Screenshot redirection logic.
+* `src/main/java/com/milezerosoftware/mc/screenshotmanagerenhanced/config/ModConfig.java`: Configuration holder.
 
-* **Build Mod:**
-
-  ```bash
-  ./gradlew build
-  ```
-
-  Artifacts will be in `build/libs/`.
-
-* **Run Client:**
-
-  ```bash
-  ./gradlew runClient
-  ```
-
-* **Generate Sources (IDE):**
-
-  ```bash
-  ./gradlew genSources
-  ```
-
-## Testing
-
-The project uses **JUnit 5** for unit testing.
-
-* **Run Tests:**
-
-  ```bash
-  ./gradlew test
-  ```
+## Coding Guidelines
 
 ### Unit Testing Guidance
 
@@ -89,23 +75,10 @@ The project uses **JUnit 5** for unit testing.
 * **Mocks:** Use lightweight mocks to isolate logic from the game environment when necessary.
 * **Prioritization:** Prioritize testing for utility classes, configuration logic, and data models.
 
-## Dependencies
-
-Defined in `build.gradle`:
+### Dependencies
 
 * **Fabric API**
 * **Cloth Config** (Configuration UI)
 * **ModMenu** (Mod list integration)
 
-## Key Files
-
-* `src/main/resources/fabric.mod.json`: Mod metadata (ID: `screenshot-manager-enhanced`).
-* `src/client/java/com/milezerosoftware/mc/screenshotmanagerenhanced/client/mixin/ScreenshotRecorderMixin.java`: Screenshot redirection logic.
-* `src/main/java/com/milezerosoftware/mc/screenshotmanagerenhanced/config/ModConfig.java`: Configuration holder.
-
-## Development Notes
-
-* **Per-World Logic:** The description claims per-world support, but the code currently only uses a static `customPath`.
-  Logic needs to be added to detect the current world/server context.
-* **Mixins:** Defined in `screenshot-manager-enhanced.mixins.json` (common) and `screenshot-manager-enhanced.client.mixins.json` (
-  client-only).
+## Memories

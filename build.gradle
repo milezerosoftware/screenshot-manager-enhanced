@@ -135,16 +135,17 @@ publishing {
 	}
 }
 
-githubRelease {
-	token = System.getenv("GITHUB_TOKEN") ?: "" // Prevent null ambiguity
-	owner = "milezerosoftware"
-	repo = "screenshot-manager-enhanced"
-	tagName = "v${project.version}"
-	targetCommitish = "main"
-	releaseName = "v${project.version}"
-	body = "" 
-	draft = false
-	prerelease = false
-	releaseAssets = files("build/libs/${project.archives_base_name}-${project.version}.jar")
-	overwrite = true
-}
+// TODO: Fix to work properly with GitHub Actions
+// githubRelease {
+// 	token = System.getenv("GITHUB_TOKEN") ?: "" // Prevent null ambiguity
+// 	owner = "milezerosoftware"
+// 	repo = "screenshot-manager-enhanced"
+// 	tagName = "v${project.version}"
+// 	targetCommitish = "main"
+// 	releaseName = "v${project.version}"
+// 	body = "" 
+// 	draft = false
+// 	prerelease = false
+// 	releaseAssets = files("build/libs/${project.archives_base_name}-${project.version}.jar")
+// 	overwrite = true
+// }
