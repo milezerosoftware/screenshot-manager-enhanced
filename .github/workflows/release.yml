@@ -1,8 +1,9 @@
-name: release
-on:
-  push:
-    tags:
-      - 'v*'
+#### TODO: Fix to work properly with GitHub Actions and Tagging releases
+# name: release
+# on:
+#   push:
+#     tags:
+#       - 'v*'
 
 jobs:
   release:

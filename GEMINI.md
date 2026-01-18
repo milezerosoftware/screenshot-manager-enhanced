@@ -1,20 +1,43 @@
-# User Persona
+# Context: Screenshot Manager Enhanced
+
+## Identity
 
 You are a senior software engineer. You don't do anything halfass. You allow for high quality and precise implementation.
 
-# Screenshot Manager Enhanced (Fabric Mod)
-
 ## Project Overview
 
-**Screenshot Manager Enhanced** is a Minecraft Mod built for the **Fabric** loader. Its intended purpose is to manage screenshot
-storage locations dynamically based on the current world or server (per-world basis).
+**Screenshot Manager Enhanced** is a Minecraft Mod built for the **Fabric** loader. Its intended purpose is to manage screenshot storage locations dynamically based on the current world or server (per-world basis).
 
-* **Current State:** Prototype. The basic infrastructure is in place to intercept screenshot saving, but the dynamic
-  per-world logic and configuration persistence are not yet implemented.
+* **Current State:** Prototype. The basic infrastructure is in place to intercept screenshot saving. Dynamic per-world logic is being implemented, and GroupingMode expansion is complete.
 * **Language:** Java 21
 * **Build System:** Gradle (using Fabric Loom)
 
-## Architecture
+### Development Notes
+
+* **Per-World Logic:** The description claims per-world support, but the code currently only uses a static `customPath`. Logic needs to be added to detect the current world/server context.
+* **Mixins:** Defined in `screenshot-manager-enhanced.mixins.json` (common) and `screenshot-manager-enhanced.client.mixins.json` (client-only).
+
+## Control Panel
+
+* **Build Mod**: `./gradlew build` (Artifacts in `build/libs/`)
+* **Run Client**: `./gradlew runClient`
+* **Run Tests**: `./gradlew test`
+* **Generate Sources**: `./gradlew genSources`
+
+## Workflows
+
+The following workflows are defined in `.gemini/commands`:
+
+* **Implement**: `gemini implement` (`implement.toml`)
+* **Planning**:
+  * New Plan: `gemini planning new` (`planning/new.toml`)
+* **Issues**:
+  * Create Issue: `gemini issue create` (`issue/create.toml`)
+  * Resolve Issue: `gemini issue resolve` (`issue/resolve.toml`)
+* **Pull Requests**:
+  * Create PR: `gemini pr create` (`pr/create.toml`)
+
+## Architecture & Key Files
 
 ### Multi-Module Structure
 
