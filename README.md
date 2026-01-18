@@ -34,7 +34,7 @@ A mod designed to keep your Minecraft screenshots organized automatically. Say g
 
 ## 📥 Installation
 
-#### Option 1: Modrinth (Recommended)
+### Option 1: Modrinth (Recommended)
 
 The easiest way to install **Screenshot Manager Enhanced** is through the Modrinth Launcher or Download from the Modrinth website.
 
@@ -42,7 +42,7 @@ The easiest way to install **Screenshot Manager Enhanced** is through the Modrin
 2. Click **Install** (if using the app) or download the version matching your Minecraft instance.
 3. Ensure you have the required dependencies installed.
 
-#### Option 2: Manual Install (GitHub)
+## Option 2: Manual Install (GitHub)
 
 For those who prefer the manual route:
 
@@ -55,7 +55,7 @@ For those who prefer the manual route:
 4. **Install**: Drop the `.jar` files into your `.minecraft/mods` folder.
 5. **Launch**: Start Minecraft and enjoy organized screenshots!
 
-### ⚙️ Usage & Configuration
+## ⚙️ Usage & Configuration
 
 Once installed, the mod works automatically with the default setting (Group by `WORLD`).
 
@@ -119,12 +119,9 @@ To build or run for a specific Minecraft version, use the `-Pmc_ver` property:
 # Build Fabric for 1.21.10
 ./gradlew :fabric:build -Pmc_ver=1.21.10
 
-# Run Fabric client for 1.20.6
-./gradlew :fabric:runClient -Pmc_ver=1.20.6
-```
 
 > [!NOTE]
-> Supported Minecraft versions are defined in `versionProperties/`. Currently supported: `1.21.10`, `1.21.8`, `1.20.6`.
+> Supported Minecraft versions are defined in `versionProperties/`. Currently supported: `1.21.10`, `1.21.8`, `1.20.6`, `1.20.5`.
 
 ## 🚀 Release Process
 
