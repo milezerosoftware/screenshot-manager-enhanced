@@ -67,11 +67,23 @@ To change the settings:
 4. **Global Settings**: default behavior for all worlds.
 5. **World Overrides**: Add specifics for your favorite servers or worlds *(Coming Soon)*.
 
-## 🛠️ Building from Source
+## 🤝 Contributing
+
+We welcome contributions!
+
+1. **Fork the Repository**
+2. **Clone**: `git clone https://github.com/milezerosoftware/screenshot-manager-enhanced.git`
+3. **Make Changes**: Core logic resides in `common/`. Loader-specific code is in `fabric/` (and future modules).
+4. **Test**: Run `./gradlew :fabric:runClient -Pmc_ver=1.21.10` to test locally.
+5. **Pull Request**: Submit a PR with a clear description of your changes.
+
+Please report any bugs or feature requests on the [Issue Tracker](https://github.com/milezerosoftware/screenshot-manager-enhanced/issues).
+
+### 🛠️ Building from Source
 
 This project uses a multi-module Gradle structure to support multiple Minecraft versions.
 
-### Build All (Recommended)
+#### Build All (Recommended)
 
 Build all supported versions for all loaders in one command:
 
@@ -79,7 +91,7 @@ Build all supported versions for all loaders in one command:
 ./gradlew buildAllAll
 ```
 
-### Build by Loader
+#### Build by Loader
 
 Build all supported Minecraft versions for a specific loader:
 
@@ -114,40 +126,28 @@ To build or run for a specific Minecraft version, use the `-Pmc_ver` property:
 > [!NOTE]
 > Supported Minecraft versions are defined in `versionProperties/`. Currently supported: `1.21.10`, `1.21.8`, `1.20.6`.
 
-## 🤝 Contributing
-
-We welcome contributions!
-
-1. **Fork the Repository**
-2. **Clone**: `git clone https://github.com/milezerosoftware/screenshot-manager-enhanced.git`
-3. **Make Changes**: Core logic resides in `common/`. Loader-specific code is in `fabric/` (and future modules).
-4. **Test**: Run `./gradlew :fabric:runClient -Pmc_ver=1.21.10` to test locally.
-5. **Pull Request**: Submit a PR with a clear description of your changes.
-
-Please report any bugs or feature requests on the [Issue Tracker](https://github.com/milezerosoftware/screenshot-manager-enhanced/issues).
-
 ## 🚀 Release Process
 
 We support two ways to cut a release: **Automated** (Recommended) and **Manual**.
 
 ### Option 1: Automated (GitHub Actions)
 
-1. Update `mod_version` in `gradle.properties` (e.g., `1.0.0`).
-2. Commit the change: `git commit -am "chore: bump version to 1.0.0"`.
-3. Tag the commit: `git tag v1.0.0`.
-4. Push the tag: `git push origin v1.0.0`.
+1. Update `mod_version` in `gradle.properties` (e.g., `1.0.1`).
+2. Commit the change: `git commit -am "chore: bump version to 1.0.1"`.
+3. Tag the commit: `git tag v1.0.1`.
+4. Push the tag: `git push origin v1.0.1`.
 5. The GitHub Action will automatically:
-    * Build the project.
-    * Create a GitHub Release named `v1.0.0`.
-    * Attach the built JAR file.
+    * Build all supported Minecraft versions (internal calls to `buildAllAll`).
+    * Create a GitHub Release named `v1.0.1`.
+    * Attach the built JARs for all versions to the release.
 
 ### Option 2: Manual (CLI)
 
-You can create a GitHub release directly from your terminal if you have a `GITHUB_TOKEN`.
+You can create a GitHub release directly from your terminal. This will build all versions and upload them.
 
 ```bash
 export GITHUB_TOKEN=your_token_here
-./gradlew githubRelease
+./gradlew buildAllAll githubRelease
 ```
 
 > [!IMPORTANT]

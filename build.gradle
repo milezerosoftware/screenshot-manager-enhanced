@@ -145,7 +145,8 @@ githubRelease {
 	body = "" 
 	draft = false
 	prerelease = false
-	releaseAssets = files("build/libs/${project.archives_base_name}-${project.version}.jar")
+	// Collect all built jars from subprojects, excluding sources and dev jars
+	releaseAssets = fileTree(projectDir).include("**/build/libs/*.jar").exclude("**/*-sources.jar").exclude("**/*-dev.jar")
 	overwrite = true
 }
 
