@@ -19,7 +19,7 @@ jobs:
           distribution: 'microsoft'
       - name: make gradle wrapper executable
         run: chmod +x ./gradlew
-      - name: create release
+      - name: build and release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: ./gradlew githubRelease
+        run: ./gradlew buildAllAll githubRelease
