@@ -1,9 +1,9 @@
-#### TODO: Fix to work properly with GitHub Actions and Tagging releases
-# name: release
-# on:
-#   push:
-#     tags:
-#       - 'v*'
+name: release
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
 
 jobs:
   release:
