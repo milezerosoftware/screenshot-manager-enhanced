@@ -8,3 +8,29 @@ pluginManagement {
 		gradlePluginPortal()
 	}
 }
+
+// Inline Version Loading Logic
+def defaultVer = settings.providers.gradleProperty("minecraft_version").getOrElse("1.21.11")
+def mcVer = settings.providers.gradleProperty("mc_ver").getOrElse(defaultVer)
+def propsFile = file("versionProperties/${mcVer}.properties")
+
+if (!propsFile.exists()) {
+    throw new GradleException("Minecraft version properties file not found: ${propsFile.absolutePath}")
+}
+
+def props = new Properties()
+propsFile.withInputStream { props.load(it) }
+
+props.each { key, value ->
+    settings.ext.set(key, value)
+}
+settings.ext.set("mc_ver", mcVer)
+
+println "Loaded Minecraft version configuration for: ${mcVer}"
+
+include 'common'
+if (settings.ext.builds_for.contains("fabric")) {
+    include 'fabric'
+}
+
+rootProject.name = 'screenshot-manager-enhanced'
