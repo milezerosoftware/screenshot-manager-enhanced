@@ -135,17 +135,50 @@ publishing {
 	}
 }
 
-// TODO: Fix to work properly with GitHub Actions
-// githubRelease {
-// 	token = System.getenv("GITHUB_TOKEN") ?: "" // Prevent null ambiguity
-// 	owner = "milezerosoftware"
-// 	repo = "screenshot-manager-enhanced"
-// 	tagName = "v${project.version}"
-// 	targetCommitish = "main"
-// 	releaseName = "v${project.version}"
-// 	body = "" 
-// 	draft = false
-// 	prerelease = false
-// 	releaseAssets = files("build/libs/${project.archives_base_name}-${project.version}.jar")
-// 	overwrite = true
-// }
+githubRelease {
+	token = System.getenv("GITHUB_TOKEN") ?: "" // Prevent null ambiguity
+	owner = "milezerosoftware"
+	repo = "screenshot-manager-enhanced"
+	tagName = "v${project.version}"
+	targetCommitish = "main"
+	releaseName = "v${project.version}"
+	body = "" 
+	draft = false
+	prerelease = false
+	// Collect all built jars from subprojects, excluding sources and dev jars
+	releaseAssets = fileTree(projectDir).include("**/build/libs/*.jar").exclude("**/*-sources.jar").exclude("**/*-dev.jar")
+	overwrite = true
+}
+
+// --- Build-All Automation ---
+
+def getVersionProperties() {
+    def propsDir = file("versionProperties")
+    if (!propsDir.exists()) return []
+    return propsDir.listFiles().findAll { it.name.endsWith(".properties") }.collect { it.name.replace(".properties", "") }
+}
+
+def versionList = getVersionProperties()
+
+// Individual Fabric Build Tasks per version
+versionList.each { mcVersion ->
+    tasks.register("buildFabric_${mcVersion.replace('.', '_')}", Exec) {
+        group = "build all"
+        description = "Build Fabric mod for Minecraft ${mcVersion}"
+        commandLine "./gradlew", ":fabric:build", "-Pmc_ver=${mcVersion}"
+    }
+}
+
+// Aggregate Fabric Build Task
+tasks.register("buildAllFabric") {
+    group = "build all"
+    description = "Build Fabric mod for all configured Minecraft versions"
+    dependsOn versionList.collect { "buildFabric_${it.replace('.', '_')}" }
+}
+
+// Future Aggregate Task (Loader-agnostic placeholder)
+tasks.register("buildAllAll") {
+    group = "build all"
+    description = "Build all loaders for all configured Minecraft versions"
+    dependsOn "buildAllFabric"
+}

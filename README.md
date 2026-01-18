@@ -34,7 +34,7 @@ A mod designed to keep your Minecraft screenshots organized automatically. Say g
 
 ## 📥 Installation
 
-#### Option 1: Modrinth (Recommended)
+### Option 1: Modrinth (Recommended)
 
 The easiest way to install **Screenshot Manager Enhanced** is through the Modrinth Launcher or Download from the Modrinth website.
 
@@ -42,7 +42,7 @@ The easiest way to install **Screenshot Manager Enhanced** is through the Modrin
 2. Click **Install** (if using the app) or download the version matching your Minecraft instance.
 3. Ensure you have the required dependencies installed.
 
-#### Option 2: Manual Install (GitHub)
+## Option 2: Manual Install (GitHub)
 
 For those who prefer the manual route:
 
@@ -55,7 +55,7 @@ For those who prefer the manual route:
 4. **Install**: Drop the `.jar` files into your `.minecraft/mods` folder.
 5. **Launch**: Start Minecraft and enjoy organized screenshots!
 
-### ⚙️ Usage & Configuration
+## ⚙️ Usage & Configuration
 
 Once installed, the mod works automatically with the default setting (Group by `WORLD`).
 
@@ -69,15 +69,59 @@ To change the settings:
 
 ## 🤝 Contributing
 
-We welcome contributions! If you're interested in helping improve Screenshot Manager Enhanced:
+We welcome contributions!
 
-1. **Fork the Repository**: Create your own fork on GitHub.
+1. **Fork the Repository**
 2. **Clone**: `git clone https://github.com/milezerosoftware/screenshot-manager-enhanced.git`
-3. **Make Changes**: Implement your features or fixes.
-4. **Test**: Run `./gradlew runClient` to test locally.
+3. **Make Changes**: Core logic resides in `common/`. Loader-specific code is in `fabric/` (and future modules).
+4. **Test**: Run `./gradlew :fabric:runClient -Pmc_ver=1.21.10` to test locally.
 5. **Pull Request**: Submit a PR with a clear description of your changes.
 
 Please report any bugs or feature requests on the [Issue Tracker](https://github.com/milezerosoftware/screenshot-manager-enhanced/issues).
+
+### 🛠️ Building from Source
+
+This project uses a multi-module Gradle structure to support multiple Minecraft versions.
+
+#### Build All (Recommended)
+
+Build all supported versions for all loaders in one command:
+
+```bash
+./gradlew buildAllAll
+```
+
+#### Build by Loader
+
+Build all supported Minecraft versions for a specific loader:
+
+```bash
+./gradlew buildAllFabric
+```
+
+> [!TIP]
+> You can discover all available loader and version tasks by running:
+> `./gradlew tasks --group "build all"`
+
+#### Planned Loader Support
+
+Tasks for these are not yet implemented but are on the roadmap:
+
+* **NeoForge**: `buildAllNeoForge`
+* **Forge**: `buildAllForge`
+* **Quilt**: `buildAllQuilt`
+
+### Build Specific Version
+
+To build or run for a specific Minecraft version, use the `-Pmc_ver` property:
+
+```bash
+# Build Fabric for 1.21.10
+./gradlew :fabric:build -Pmc_ver=1.21.10
+
+
+> [!NOTE]
+> Supported Minecraft versions are defined in `versionProperties/`. Currently supported: `1.21.10`, `1.21.8`, `1.20.6`, `1.20.5`.
 
 ## 🚀 Release Process
 
@@ -85,22 +129,22 @@ We support two ways to cut a release: **Automated** (Recommended) and **Manual**
 
 ### Option 1: Automated (GitHub Actions)
 
-1. Update `mod_version` in `gradle.properties` (e.g., `1.0.0`).
-2. Commit the change: `git commit -am "chore: bump version to 1.0.0"`.
-3. Tag the commit: `git tag v1.0.0`.
-4. Push the tag: `git push origin v1.0.0`.
+1. Update `mod_version` in `gradle.properties` (e.g., `1.0.1`).
+2. Commit the change: `git commit -am "chore: bump version to 1.0.1"`.
+3. Tag the commit: `git tag v1.0.1`.
+4. Push the tag: `git push origin v1.0.1`.
 5. The GitHub Action will automatically:
-    * Build the project.
-    * Create a GitHub Release named `v1.0.0`.
-    * Attach the built JAR file.
+    * Build all supported Minecraft versions (internal calls to `buildAllAll`).
+    * Create a GitHub Release named `v1.0.1`.
+    * Attach the built JARs for all versions to the release.
 
 ### Option 2: Manual (CLI)
 
-You can create a GitHub release directly from your terminal if you have a `GITHUB_TOKEN`.
+You can create a GitHub release directly from your terminal. This will build all versions and upload them.
 
 ```bash
 export GITHUB_TOKEN=your_token_here
-./gradlew githubRelease
+./gradlew buildAllAll githubRelease
 ```
 
 > [!IMPORTANT]

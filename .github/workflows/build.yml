@@ -7,23 +7,31 @@ name: build
 on:
   pull_request:
     paths:
-      - "src/**"
+      - "common/**"
+      - "fabric/**"
+      - "buildSrc/**"
+      - "versionProperties/**"
       - "build.gradle"
       - "gradle.properties"
       - "settings.gradle"
-      - "gradle/wrapper/**"
       - ".github/workflows/build.yml"
   push:
     paths:
-      - "src/**"
+      - "common/**"
+      - "fabric/**"
+      - "buildSrc/**"
+      - "versionProperties/**"
       - "build.gradle"
       - "gradle.properties"
       - "settings.gradle"
-      - "gradle/wrapper/**"
       - ".github/workflows/build.yml"
 
 jobs:
   build:
+    strategy:
+      fail-fast: false
+      matrix:
+        mc_ver: [1.21.11, 1.21.10, 1.21.8, 1.21.5, 1.21.4, 1.21.3, 1.21.1, 1.20.5-6]
     runs-on: ubuntu-24.04
     steps:
       - name: checkout repository
@@ -38,11 +46,11 @@ jobs:
       - name: make gradle wrapper executable
         run: chmod +x ./gradlew
       - name: test
-        run: ./gradlew test
+        run: ./gradlew :common:test -Pmc_ver=${{ matrix.mc_ver }}
       - name: build
-        run: ./gradlew build
+        run: ./gradlew :fabric:build -Pmc_ver=${{ matrix.mc_ver }}
       - name: capture build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: Artifacts
-          path: build/libs/
+          name: Artifacts-${{ matrix.mc_ver }}
+          path: fabric/build/libs/
