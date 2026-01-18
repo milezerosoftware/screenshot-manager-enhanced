@@ -38,25 +38,54 @@ This plan outlines the steps to restructure the project using the "Universal Mod
     - **Verification**: Run `./gradlew projects` and check that `:common` and `:fabric` are listed.
     - **CHECKPOINT**: STOP for User Commit.
 
-4. **Step 4: Code Migration**
+### 3. Build Logic
+
+#### Artifact Naming
+
+Jars must be named following the pattern: `${project_name}-${release_version}-${minecraft_version}.jar`.
+Example: `screenshot-manager-enhanced-1.0.1-1.21.10.jar`.
+
+#### `settings.gradle` Logic
+
+The logic for loading version properties is inlined directly for maximum initialization robustness:
+
+```groovy
+def mcVer = settings.providers.gradleProperty("mc_ver").getOrElse(settings.providers.gradleProperty("minecraft_version").getOrElse("1.21.11"))
+def propsFile = file("versionProperties/${mcVer}.properties")
+// ... load and inject to gradle.beforeProject
+```
+
+#### `fabric/build.gradle`
+
+Utilizes `fabric-loom` and maps common source:
+
+```groovy
+loom {
+    splitEnvironmentSourceSets()
+}
+sourceSets.main.java.srcDirs += [project(":common").file("src/main/java")]
+// ... etc
+```
+
+1. **Step 4: Code Migration**
     - Files to move: Move content of current `src/main/java`, `src/client/java`, and `src/main/resources` to `common/src/main/java` and `common/src/main/resources`.
     - Create `common/build.gradle` applying the `minecraft` plugin from `buildSrc`.
     - **Verification**: Check file locations via `ls -R common/src/main`.
     - **CHECKPOINT**: STOP for User Commit.
 
-5. **Step 5: Fabric Project Setup**
+2. **Step 5: Fabric Project Setup**
     - Files to create: `fabric/build.gradle`.
     - Changes needed: Apply `fabric` plugin from `buildSrc`. Configure it to pull source and resources from the `:common` project as a thin wrapper.
     - **Verification**: Run `./gradlew :fabric:tasks` to ensure Fabric tasks are generated.
     - **CHECKPOINT**: STOP for User Commit.
 
-6. **Step 6: Properties Configuration**
+3. **Step 6: Properties Configuration**
     - Files to create: `versionProperties/1.21.11.properties`, `versionProperties/1.21.8.properties`, `versionProperties/1.20.6.properties`.
     - Changes needed: Define versions for Minecraft, Fabric Loader, Fabric API, Cloth Config, and ModMenu for each target.
     - **Verification**: Verify files exist and contain correct version mappings.
     - **CHECKPOINT**: STOP for User Commit.
 
-7. **Step 7: Final Verification & Testing**
+4. **Step 7: Final Verification & Testing**
     - **1.21.11**: Run `./gradlew :fabric:runClient -Pmc_ver=1.21.11`. Verify mod loads and screenshots are grouped.
     - **1.21.8**: Run `./gradlew :fabric:runClient -Pmc_ver=1.21.8`. Verify mod loads.
     - **1.20.6**: Run `./gradlew :fabric:runClient -Pmc_ver=1.20.6`. Verify mod loads.

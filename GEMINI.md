@@ -16,82 +16,61 @@ storage locations dynamically based on the current world or server (per-world ba
 
 ## Architecture
 
-### Entry Points
+### Multi-Module Structure
 
-* **Main:** `com.milezerosoftware.mc.screenshotmanagerenhanced.ModInitializerImpl` - Standard Fabric initialization.
-* **Client:** `com.milezerosoftware.mc.screenshotmanagerenhanced.ScreenshotManagerClient` - Client-side initialization.
+This project uses a "Universal Mod" architecture to support multiple Minecraft versions and loaders with minimal code duplication.
 
-### Core Logic
+* **`common/`**: Contains the core logic, data models, and mixins that are shared across all versions and loaders.
+* **`fabric/`**: A loader-specific module that applies the `fabric-loom` plugin and wraps the `common` source code.
+* **`buildSrc/`**: Contains custom Gradle logic, including the `VersionLoader` utility.
+* **`versionProperties/`**: Contains `.properties` files that define dependency versions (Minecraft, Fabric API, etc.) for each target version.
 
-* **This is important: High-Level Project Architecture**
-  Since your mod targets client-only features (screenshots/UI), almost all logic will live in the client source set,
-  while your data models live in main.
+### Key Components
 
-| Package     | Package Path                            | Responsibility                                                      |
-|-------------|-----------------------------------------|---------------------------------------------------------------------|
-| Data Models | `com.milezerosoftware.mc.config`        | POJO classes for global and per-world settings.                     |
-| Logic       | `com.milezerosoftware.mc.client.util`   | Extracting world data (coordinates, days) and PNG metadata writing. |
-| Integration | `com.milezerosoftware.mc.client.mixin`  | Intercepting the screenshot process.                                |
-| UI          | `com.milezerosoftware.mc.client.compat` | ModMenu and Cloth Config screens.                                   |
-
-* **Mixin:** `com.milezerosoftware.mc.client.mixin.ScreenshotRecorderMixin`
-  * Injects into `net.minecraft.client.util.ScreenshotRecorder.getScreenshotFilename`.
-  * Currently redirects all screenshots to a path defined in `ModConfig` (defaulting to a subfolder).
-| Package     | Package Path                            | Responsibility                                                      |
-|-------------|-----------------------------------------|---------------------------------------------------------------------|
-| Data Models | `com.milezerosoftware.mc.screenshotmanagerenhanced.config`        | POJO classes for global and per-world settings.                     |
-| Logic       | `com.milezerosoftware.mc.screenshotmanagerenhanced.client.util`   | Extracting world data (coordinates, days) and PNG metadata writing. |
-| Integration | `com.milezerosoftware.mc.screenshotmanagerenhanced.client.mixin`  | Intercepting the screenshot process.                                |
-| UI          | `com.milezerosoftware.mc.screenshotmanagerenhanced.client.compat` | ModMenu and Cloth Config screens.                                   |
-
-* **Mixin:** `com.milezerosoftware.mc.screenshotmanagerenhanced.client.mixin.ScreenshotRecorderMixin`
-  * Currently a singleton stub.
-  * **TODO:** Implement integration with Cloth Config (dependency is already added) and dynamic path resolution logic.
+| Component | Path (relative to `common/src/main/java`) | Responsibility |
+|-----------|------------------------------------------|----------------|
+| Data Models | `...screenshotmanagerenhanced.config` | POJO classes for global and per-world settings. |
+| Path Logic | `...screenshotmanagerenhanced.client.util` | `ScreenshotPathGenerator` handles all path resolution logic. |
+| Integration | `...screenshotmanagerenhanced.client.mixin` | Intercepts the screenshot saving process via `ScreenshotRecorderMixin`. |
 
 ## Building and Running
 
-The project uses the standard Gradle wrapper.
+The build system is dynamic. Use the `-Pmc_ver` property to target a specific Minecraft version.
 
-* **Build Mod:**
+### Build All Support
 
-  ```bash
-  ./gradlew build
+* `buildAllFabric`: Builds all configured Fabric versions.
+* `buildAllAll`: Builds all configured loaders and versions.
+
+#### Future Build Support (Targets)
+
+* `buildAllNeoForge`: (Roadmap)
+* `buildAllForge`: (Roadmap)
+* `buildAllQuilt`: (Roadmap)
+
+### Standard Commands
+
   ```
-
-  Artifacts will be in `build/libs/`.
 
 * **Run Client:**
 
   ```bash
-  ./gradlew runClient
-  ```
-
-* **Generate Sources (IDE):**
-
-  ```bash
-  ./gradlew genSources
+  ./gradlew :fabric:runClient -Pmc_ver=1.21.10
   ```
 
 ## Testing
 
-The project uses **JUnit 5** for unit testing.
+The project uses **JUnit 5** for unit testing, located in `common/src/test/java`.
 
 * **Run Tests:**
 
   ```bash
-  ./gradlew test
+  ./gradlew :common:test
   ```
-
-### Unit Testing Guidance
-
-* **Minecraft Coupling:** Avoid direct interaction with Minecraft classes (e.g., `MinecraftClient`, `World`) in unit tests as they require a full game environment.
-* **Decoupling:** Focus on testing logic that can be decoupled from Minecraft/Fabric specific APIs.
-* **Mocks:** Use lightweight mocks to isolate logic from the game environment when necessary.
-* **Prioritization:** Prioritize testing for utility classes, configuration logic, and data models.
 
 ## Dependencies
 
-Defined in `build.gradle`:
+Dependencies are managed dynamically via `versionProperties/*.properties`. Key libraries include:
 
 * **Fabric API**
 * **Cloth Config** (Configuration UI)
@@ -99,13 +78,7 @@ Defined in `build.gradle`:
 
 ## Key Files
 
-* `src/main/resources/fabric.mod.json`: Mod metadata (ID: `screenshot-manager-enhanced`).
-* `src/client/java/com/milezerosoftware/mc/screenshotmanagerenhanced/client/mixin/ScreenshotRecorderMixin.java`: Screenshot redirection logic.
-* `src/main/java/com/milezerosoftware/mc/screenshotmanagerenhanced/config/ModConfig.java`: Configuration holder.
-
-## Development Notes
-
-* **Per-World Logic:** The description claims per-world support, but the code currently only uses a static `customPath`.
-  Logic needs to be added to detect the current world/server context.
-* **Mixins:** Defined in `screenshot-manager-enhanced.mixins.json` (common) and `screenshot-manager-enhanced.client.mixins.json` (
-  client-only).
+* `settings.gradle`: Handles dynamic project inclusion and property loading.
+* `common/src/main/resources/fabric.mod.json`: Mod metadata.
+* `common/src/client/java/.../ScreenshotRecorderMixin.java`: Interception logic.
+* `common/src/main/java/.../ScreenshotPathGenerator.java`: Core path logic.

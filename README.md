@@ -67,14 +67,61 @@ To change the settings:
 4. **Global Settings**: default behavior for all worlds.
 5. **World Overrides**: Add specifics for your favorite servers or worlds *(Coming Soon)*.
 
+## 🛠️ Building from Source
+
+This project uses a multi-module Gradle structure to support multiple Minecraft versions.
+
+### Build All (Recommended)
+
+Build all supported versions for all loaders in one command:
+
+```bash
+./gradlew buildAllAll
+```
+
+### Build by Loader
+
+Build all supported Minecraft versions for a specific loader:
+
+```bash
+./gradlew buildAllFabric
+```
+
+> [!TIP]
+> You can discover all available loader and version tasks by running:
+> `./gradlew tasks --group "build all"`
+
+#### Planned Loader Support
+
+Tasks for these are not yet implemented but are on the roadmap:
+
+* **NeoForge**: `buildAllNeoForge`
+* **Forge**: `buildAllForge`
+* **Quilt**: `buildAllQuilt`
+
+### Build Specific Version
+
+To build or run for a specific Minecraft version, use the `-Pmc_ver` property:
+
+```bash
+# Build Fabric for 1.21.10
+./gradlew :fabric:build -Pmc_ver=1.21.10
+
+# Run Fabric client for 1.20.6
+./gradlew :fabric:runClient -Pmc_ver=1.20.6
+```
+
+> [!NOTE]
+> Supported Minecraft versions are defined in `versionProperties/`. Currently supported: `1.21.10`, `1.21.8`, `1.20.6`.
+
 ## 🤝 Contributing
 
-We welcome contributions! If you're interested in helping improve Screenshot Manager Enhanced:
+We welcome contributions!
 
-1. **Fork the Repository**: Create your own fork on GitHub.
+1. **Fork the Repository**
 2. **Clone**: `git clone https://github.com/milezerosoftware/screenshot-manager-enhanced.git`
-3. **Make Changes**: Implement your features or fixes.
-4. **Test**: Run `./gradlew runClient` to test locally.
+3. **Make Changes**: Core logic resides in `common/`. Loader-specific code is in `fabric/` (and future modules).
+4. **Test**: Run `./gradlew :fabric:runClient -Pmc_ver=1.21.10` to test locally.
 5. **Pull Request**: Submit a PR with a clear description of your changes.
 
 Please report any bugs or feature requests on the [Issue Tracker](https://github.com/milezerosoftware/screenshot-manager-enhanced/issues).
