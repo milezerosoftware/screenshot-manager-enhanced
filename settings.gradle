@@ -26,6 +26,13 @@ props.each { key, value ->
 }
 settings.ext.set("mc_ver", mcVer)
 
+gradle.beforeProject { project ->
+    props.each { key, value ->
+        project.ext.set(key, value)
+    }
+    project.ext.set("mc_ver", mcVer)
+}
+
 println "Loaded Minecraft version configuration for: ${mcVer}"
 
 include 'common'
