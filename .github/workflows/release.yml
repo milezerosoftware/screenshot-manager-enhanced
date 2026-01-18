@@ -20,7 +20,12 @@ jobs:
           distribution: 'microsoft'
       - name: make gradle wrapper executable
         run: chmod +x ./gradlew
-      - name: build and release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: ./gradlew buildAllAll githubRelease
+      - name: build all versions
+        run: ./gradlew buildAllAll
+      - name: create release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            fabric/build/libs/*.jar
+            !fabric/build/libs/*-sources.jar
+            !fabric/build/libs/*-dev.jar

@@ -1,7 +1,6 @@
 plugins {
 	id 'fabric-loom' version "${loom_version}"
 	id 'maven-publish'
-	id "com.github.breadmoirai.github-release" version "2.4.1"
 }
 
 def getVersionSuffix() {
@@ -135,20 +134,6 @@ publishing {
 	}
 }
 
-githubRelease {
-	token = System.getenv("GITHUB_TOKEN") ?: "" // Prevent null ambiguity
-	owner = "milezerosoftware"
-	repo = "screenshot-manager-enhanced"
-	tagName = "v${project.version}"
-	targetCommitish = "main"
-	releaseName = "v${project.version}"
-	body = "" 
-	draft = false
-	prerelease = true
-	// Collect all built jars from subprojects, excluding sources and dev jars
-	releaseAssets = fileTree(projectDir).include("**/build/libs/*.jar").exclude("**/*-sources.jar").exclude("**/*-dev.jar")
-	overwrite = true
-}
 
 // --- Build-All Automation ---
 
