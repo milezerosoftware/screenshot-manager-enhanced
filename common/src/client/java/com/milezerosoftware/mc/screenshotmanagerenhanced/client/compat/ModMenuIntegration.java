@@ -23,34 +23,60 @@ public class ModMenuIntegration implements ModMenuApi {
 
                         ConfigBuilder builder = ConfigBuilder.create()
                                         .setParentScreen(parent)
-                                        .setTitle(Text.literal("Screenshot Manager Settings"))
-                                        .setSavingRunnable(ConfigManager::save);
+                                        .setTitle(Text.literal("Screenshot Manager Enhanced Settings"))
+                                        .setSavingRunnable(ConfigManager::save)
+                                        .setAlwaysShowTabs(false) // Hide tabs when only one category
+                                        .setTransparentBackground(true) // Enable transparent background
+                                        .setDoesConfirmSave(false); // Don't show confirmation dialog
 
                         ConfigEntryBuilder entryBuilder = builder.entryBuilder();
 
                         // --- General Category ---
                         ConfigCategory generalCategory = builder.getOrCreateCategory(Text.literal("General"));
 
-                        // Entry: Enable Metadata
-                        generalCategory.addEntry(entryBuilder
-                                        .startBooleanToggle(Text.literal("Enable Metadata"),
-                                                        currentConfig.enableMetadata)
-                                        .setDefaultValue(true) // Default from ModConfig
-                                        .setTooltip(Text.literal(
-                                                        "Save extra metadata with screenshots (World, Coords, etc.)"))
-                                        .setSaveConsumer(newValue -> currentConfig.enableMetadata = newValue)
-                                        .build());
-
                         // Entry: Grouping Mode
+                        // Create tooltip lines
+                        Text[] groupingTooltip = new Text[] {
+                                        Text.literal("Select how screenshots are grouped:"),
+                                        Text.literal("- World: Group by World Name"),
+                                        Text.literal("- Date: Group by Date (yyyy-MM-dd)"),
+                                        Text.literal("- World / Dim: World, then Dimension"),
+                                        Text.literal("- World / Date: World, then Date"),
+                                        Text.literal("- World / Dim / Date: World, Dimension, then Date"),
+                                        Text.literal("- World / Date / Dim: World, Date, then Dimension"),
+                                        Text.literal("- None: No grouping (flat)")
+                        };
+
                         generalCategory.addEntry(entryBuilder
                                         .startEnumSelector(Text.literal("Grouping Mode"), GroupingMode.class,
                                                         currentConfig.groupingMode)
-                                        .setDefaultValue(GroupingMode.WORLD) // Default from ModConfig
-                                        .setEnumNameProvider(enumValue -> Text.literal(enumValue.name())) // Simple name
-                                                                                                          // display
-                                        .setTooltip(Text.literal("How screenshots are grouped in folders"))
+                                        .setDefaultValue(GroupingMode.WORLD)
+                                        .setEnumNameProvider(enumValue -> {
+                                                // Shorten names to fit in the cycle button/dropdown
+                                                return switch ((GroupingMode) enumValue) {
+                                                        case DATE -> Text.literal("Date");
+                                                        case WORLD -> Text.literal("World");
+                                                        case WORLD_DIMENSION -> Text.literal("World / Dim");
+                                                        case WORLD_DATE -> Text.literal("World / Date");
+                                                        case WORLD_DIMENSION_DATE -> Text.literal("World / Dim / Date");
+                                                        case WORLD_DATE_DIMENSION -> Text.literal("World / Date / Dim");
+                                                        case NONE -> Text.literal("None");
+                                                };
+                                        })
+                                        .setTooltip(groupingTooltip)
                                         .setSaveConsumer(newValue -> currentConfig.groupingMode = newValue)
                                         .build());
+
+                        // TODO: Implement Issue #6 - Add metadata toggle
+                        // // Entry: Enable Metadata
+                        // generalCategory.addEntry(entryBuilder
+                        // .startBooleanToggle(Text.literal("Enable Metadata"),
+                        // currentConfig.enableMetadata)
+                        // .setDefaultValue(true) // Default from ModConfig
+                        // .setTooltip(Text.literal(
+                        // "Save extra metadata with screenshots (World, Coords, etc.)"))
+                        // .setSaveConsumer(newValue -> currentConfig.enableMetadata = newValue)
+                        // .build());
 
                         // --- Visual Styling (Placeholder) ---
                         // TODO: Issue #7 - Add visual styling logic here.
