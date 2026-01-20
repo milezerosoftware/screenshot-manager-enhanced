@@ -34,25 +34,12 @@ public class ModMenuIntegration implements ModMenuApi {
                         // --- General Category ---
                         ConfigCategory generalCategory = builder.getOrCreateCategory(Text.literal("General"));
 
-                        // Entry: Grouping Mode
-                        // Create tooltip lines
-                        Text[] groupingTooltip = new Text[] {
-                                        Text.literal("Select how screenshots are grouped:"),
-                                        Text.literal("- World: Group by World Name"),
-                                        Text.literal("- Date: Group by Date (yyyy-MM-dd)"),
-                                        Text.literal("- World / Dim: World, then Dimension"),
-                                        Text.literal("- World / Date: World, then Date"),
-                                        Text.literal("- World / Dim / Date: World, Dimension, then Date"),
-                                        Text.literal("- World / Date / Dim: World, Date, then Dimension"),
-                                        Text.literal("- None: No grouping (flat)")
-                        };
-
+                        // Entry: Grouping Mode Selector
                         generalCategory.addEntry(entryBuilder
-                                        .startEnumSelector(Text.literal("Grouping Mode"), GroupingMode.class,
+                                        .startEnumSelector(Text.literal("§fGrouping Mode"), GroupingMode.class,
                                                         currentConfig.groupingMode)
                                         .setDefaultValue(GroupingMode.WORLD)
                                         .setEnumNameProvider(enumValue -> {
-                                                // Shorten names to fit in the cycle button/dropdown
                                                 return switch ((GroupingMode) enumValue) {
                                                         case DATE -> Text.literal("Date");
                                                         case WORLD -> Text.literal("World");
@@ -63,8 +50,48 @@ public class ModMenuIntegration implements ModMenuApi {
                                                         case NONE -> Text.literal("None");
                                                 };
                                         })
-                                        .setTooltip(groupingTooltip)
+                                        .setTooltip(Text.literal("Select how to group screenshots"))
+
                                         .setSaveConsumer(newValue -> currentConfig.groupingMode = newValue)
+                                        .build());
+
+                        // Grouping Mode Description (Collapsible sub-category)
+                        generalCategory.addEntry(entryBuilder.startSubCategory(
+                                        Text.literal("ℹ️ Grouping Mode Guide"),
+                                        java.util.Collections.singletonList(
+                                                        entryBuilder.startTextDescription(Text.literal(
+                                                                        "§eGrouping Modes§r organize screenshots into folders:\n\n"
+                                                                                        +
+                                                                                        "§bWORLD§f (World) - Groups by world/server name\n"
+                                                                                        +
+                                                                                        "  §7Example: screenshots/My_Survival_World/§r\n\n"
+                                                                                        +
+                                                                                        "§bDATE§f (Date) - Groups by date\n"
+                                                                                        +
+                                                                                        "  §7Example: screenshots/2025-01-30/§r\n\n"
+                                                                                        +
+                                                                                        "§bWORLD_DIMENSION§f (World / Dim) - World, then dimension\n"
+                                                                                        +
+                                                                                        "  §7Example: screenshots/My_World/the_nether/§r\n\n"
+                                                                                        +
+                                                                                        "§bWORLD_DATE§f (World / Date) - World, then date\n"
+                                                                                        +
+                                                                                        "  §7Example: screenshots/My_World/2025-01-30/§r\n\n"
+                                                                                        +
+                                                                                        "§bWORLD_DIMENSION_DATE§f (World / Dim / Date) - All three\n"
+                                                                                        +
+                                                                                        "  §7Example: screenshots/My_World/the_end/2025-01-30/§r\n\n"
+                                                                                        +
+                                                                                        "§bWORLD_DATE_DIMENSION§f (World / Date / Dim) - Alternate order\n"
+                                                                                        +
+                                                                                        "  §7Example: screenshots/My_World/2025-01-30/the_nether/§r\n\n"
+                                                                                        +
+                                                                                        "§bNONE§f (None) - Standard Minecraft behavior\n"
+                                                                                        +
+                                                                                        "  §7Example: screenshots/§r"))
+                                                                        .build()))
+                                        .setExpanded(false) // Collapsed by default
+                                        .setTooltip(Text.literal("Click to view detailed grouping mode information"))
                                         .build());
 
                         // TODO: Implement Issue #6 - Add metadata toggle
