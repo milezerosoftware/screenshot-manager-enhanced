@@ -55,6 +55,16 @@ public class ModMenuIntegration implements ModMenuApi {
                                         .setSaveConsumer(newValue -> currentConfig.groupingMode = newValue)
                                         .build());
 
+                        // Entry: Display Relative Path
+                        generalCategory.addEntry(entryBuilder
+                                        .startBooleanToggle(Text.literal("§fDisplay Relative Path"),
+                                                        currentConfig.displayRelativePath)
+                                        .setDefaultValue(true)
+                                        .setTooltip(Text.literal(
+                                                        "Show the relative path in the screenshot notification"))
+                                        .setSaveConsumer(newValue -> currentConfig.displayRelativePath = newValue)
+                                        .build());
+
                         // Grouping Mode Description (Collapsible sub-category)
                         generalCategory.addEntry(entryBuilder.startSubCategory(
                                         Text.literal("ℹ️ Grouping Mode Guide"),
