@@ -12,6 +12,12 @@ You are a senior software engineer. You don't do anything halfass. You allow for
 * **Language:** Java 21
 * **Build System:** Gradle (using Fabric Loom)
 
+## Development Rules
+
+1. **Branching Strategy:** All new work must be in a branch based off of `main` or a dependent feature branch. No direct commits to `main`.
+2. **Step-by-Step Commits:** All implementation steps must conclude with a git commit that is explicitly approved by the developer.
+3. **Mandatory Testing:** All implementations must be written in a way that they are testable via unit tests. There is no skipping out on testing the code!
+
 ### Development Notes
 
 * **Per-World Logic:** The description claims per-world support, but the code currently only uses a static `customPath`. Logic needs to be added to detect the current world/server context.
