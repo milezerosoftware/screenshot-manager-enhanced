@@ -38,14 +38,6 @@ public enum GroupingMode {
     WORLD_DATE_DIMENSION,
 
     /**
-     * Group screenshots by project/world name.
-     * 
-     * @deprecated Use {@link #WORLD} instead.
-     */
-    @Deprecated
-    PROJECT,
-
-    /**
      * Do not group screenshots; store them in the root of the configured path.
      */
     NONE

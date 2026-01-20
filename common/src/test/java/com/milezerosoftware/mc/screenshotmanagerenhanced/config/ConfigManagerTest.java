@@ -21,7 +21,7 @@ public class ConfigManagerTest {
         // 1. Setup initial state
         ConfigManager.load(configFile);
         ModConfig config = ConfigManager.getInstance();
-        config.groupingMode = GroupingMode.PROJECT;
+        config.groupingMode = GroupingMode.WORLD;
         config.worldRules.put("TestWorld", new WorldConfig("worlds/test", false));
 
         // 2. Save
@@ -36,7 +36,7 @@ public class ConfigManagerTest {
         ModConfig loadedConfig = ConfigManager.getInstance();
 
         // 4. Verify
-        assertEquals(GroupingMode.PROJECT, loadedConfig.groupingMode);
+        assertEquals(GroupingMode.WORLD, loadedConfig.groupingMode);
         assertTrue(loadedConfig.worldRules.containsKey("TestWorld"));
         assertEquals("worlds/test", loadedConfig.worldRules.get("TestWorld").customPath);
         assertFalse(loadedConfig.worldRules.get("TestWorld").active);

@@ -46,7 +46,7 @@ public class ScreenshotPathGenerator {
 
         return switch (mode) {
             case DATE -> new File(screenshotsDir, dateStr);
-            case WORLD, PROJECT -> new File(screenshotsDir, safeWorldId);
+            case WORLD -> new File(screenshotsDir, safeWorldId);
             case WORLD_DIMENSION -> new File(new File(screenshotsDir, safeWorldId), safeDimension);
             case WORLD_DATE -> new File(new File(screenshotsDir, safeWorldId), dateStr);
             case WORLD_DIMENSION_DATE ->

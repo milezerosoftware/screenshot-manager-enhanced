@@ -21,6 +21,9 @@
     ],
     "client": [
       "com.milezerosoftware.mc.screenshotmanagerenhanced.ScreenshotManagerClient"
+    ],
+    "modmenu": [
+      "com.milezerosoftware.mc.screenshotmanagerenhanced.client.compat.ModMenuIntegration"
     ]
   },
   "mixins": [
