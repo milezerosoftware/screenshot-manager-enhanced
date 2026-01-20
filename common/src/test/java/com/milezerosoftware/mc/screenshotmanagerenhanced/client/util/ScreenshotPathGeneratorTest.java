@@ -95,4 +95,31 @@ public class ScreenshotPathGeneratorTest {
         // Should fall back to vanilla behavior (return the input dir directly)
         assertEquals(screenshotsDir, result);
     }
+
+    @Test
+    public void testScreenshotNotificationText() {
+        File groupingDir = new File(screenshotsDir, "Test_World_1");
+        File screenshotFile = new File(groupingDir, "2025-01-01.png");
+
+        // Case 1: displayRelativePath = false
+        String text1 = ScreenshotPathGenerator.getScreenshotNotificationText(screenshotFile, screenshotsDir, false);
+        assertEquals("2025-01-01.png", text1);
+
+        // Case 2: displayRelativePath = true, nested
+        String text2 = ScreenshotPathGenerator.getScreenshotNotificationText(screenshotFile, screenshotsDir, true);
+        // Path relative to screenshotsDir should be "Test_World_1/2025-01-01.png"
+        // Note: Using File.separator to be OS-safe if needed, but relative paths
+        // usually
+        // return correct separators.
+        // Paths.get(screenshotsDir.toURI()).relativize(Paths.get(screenshotFile.toURI())).toString();
+        // The implementation uses simple relativize which usually maintains OS
+        // separators.
+        String expected2 = "Test_World_1" + File.separator + "2025-01-01.png";
+        assertEquals(expected2, text2);
+
+        // Case 3: displayRelativePath = true, top-level
+        File topLevelFile = new File(screenshotsDir, "flat.png");
+        String text3 = ScreenshotPathGenerator.getScreenshotNotificationText(topLevelFile, screenshotsDir, true);
+        assertEquals("flat.png", text3);
+    }
 }
