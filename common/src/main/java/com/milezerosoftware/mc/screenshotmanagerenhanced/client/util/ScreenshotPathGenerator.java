@@ -56,4 +56,27 @@ public class ScreenshotPathGenerator {
             case NONE -> screenshotsDir;
         };
     }
+
+    /**
+     * Generates the text to display in the screenshot notification.
+     *
+     * @param screenshotFile      The full path to the screenshot file.
+     * @param screenshotsDir      The base screenshots directory.
+     * @param displayRelativePath Whether to display the relative path.
+     * @return The text to display.
+     */
+    public static String getScreenshotNotificationText(File screenshotFile, File screenshotsDir,
+            boolean displayRelativePath) {
+        if (!displayRelativePath || screenshotFile == null || screenshotsDir == null) {
+            return screenshotFile != null ? screenshotFile.getName() : "";
+        }
+
+        try {
+            // Relativize the path
+            return screenshotsDir.toPath().relativize(screenshotFile.toPath()).toString();
+        } catch (IllegalArgumentException e) {
+            // Fallback if paths cannot be relativized (e.g., different drives)
+            return screenshotFile.getName();
+        }
+    }
 }
