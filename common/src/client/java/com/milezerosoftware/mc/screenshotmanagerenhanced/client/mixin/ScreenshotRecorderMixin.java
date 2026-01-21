@@ -8,15 +8,18 @@ import net.minecraft.client.util.ScreenshotRecorder;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.ModifyArg;
+import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.function.Consumer;
 
 @Mixin(ScreenshotRecorder.class)
 public class ScreenshotRecorderMixin {
+    private static final ThreadLocal<FilePathInfo> SCREENSHOT_FILE_INFO = new ThreadLocal<>();
+
     // Intermediary: method_1660 [5, 6]
     @Inject(method = "getScreenshotFilename(Ljava/io/File;)Ljava/io/File;", at = @At("HEAD"), cancellable = true)
     private static void onGetScreenshotFilename(File gameDir, CallbackInfoReturnable<File> cir) {
@@ -54,55 +57,60 @@ public class ScreenshotRecorderMixin {
         cir.setReturnValue(finalFile);
     }
 
-    @ModifyArg(method = "saveScreenshot(Ljava/io/File;Ljava/lang/String;Lnet/minecraft/client/gl/Framebuffer;Ljava/util/function/Consumer;)V", at = @At(value = "INVOKE", target = "Ljava/util/function/Consumer;accept(Ljava/lang/Object;)V"), index = 0)
-    private static net.minecraft.text.Text modifyNotificationText(net.minecraft.text.Text original) {
+    @Inject(method = "getScreenshotFilename(Ljava/io/File;)Ljava/io/File;", at = @At("RETURN"))
+    private static void storeFilePathInfo(File gameDir, CallbackInfoReturnable<File> cir) {
         ModConfig config = ConfigManager.getInstance();
         if (!config.displayRelativePath) {
+            SCREENSHOT_FILE_INFO.remove();
+            return;
+        }
+
+        File screenshotFile = cir.getReturnValue();
+        File screenshotsDir = new File(gameDir, "screenshots");
+
+        String relativePath = ScreenshotPathGenerator.getScreenshotNotificationText(
+                screenshotFile,
+                screenshotsDir,
+                true);
+
+        SCREENSHOT_FILE_INFO.set(new FilePathInfo(screenshotFile, relativePath));
+    }
+
+    @ModifyVariable(method = "saveScreenshot(Ljava/io/File;Ljava/lang/String;Lnet/minecraft/client/gl/Framebuffer;Ljava/util/function/Consumer;)V", at = @At("HEAD"), argsOnly = true)
+    private static Consumer<net.minecraft.text.Text> wrapMessageConsumer(Consumer<net.minecraft.text.Text> original) {
+        FilePathInfo fileInfo = SCREENSHOT_FILE_INFO.get();
+
+        if (fileInfo == null || !ConfigManager.getInstance().displayRelativePath) {
             return original;
         }
 
+        // Return a wrapper that modifies the message before passing to the original
+        // consumer
+        return (text) -> {
+            try {
+                net.minecraft.text.Text modifiedText = modifyNotificationText(text, fileInfo);
+                original.accept(modifiedText);
+            } finally {
+                SCREENSHOT_FILE_INFO.remove(); // Clean up after first message
+            }
+        };
+    }
+
+    private static net.minecraft.text.Text modifyNotificationText(net.minecraft.text.Text original,
+            FilePathInfo fileInfo) {
         try {
-            // Extract the ClickEvent to get the file path
-            net.minecraft.text.Style style = original.getStyle();
-            net.minecraft.text.ClickEvent clickEvent = style != null ? style.getClickEvent() : null;
+            // Check if it's the success message
+            if (original.getContent() instanceof net.minecraft.text.TranslatableTextContent translatable) {
+                if ("screenshot.success".equals(translatable.getKey())) {
+                    Object[] args = translatable.getArgs();
+                    if (args.length > 0 && args[0] instanceof net.minecraft.text.Text fileComponent) {
+                        // Create new component with the relative path but same style (click event)
+                        net.minecraft.text.MutableText newFileComponent = net.minecraft.text.Text
+                                .literal(fileInfo.relativePath)
+                                .setStyle(fileComponent.getStyle());
 
-            if (clickEvent != null && clickEvent.getAction() == net.minecraft.text.ClickEvent.Action.OPEN_FILE) {
-                String filePath = clickEvent.getValue();
-                File screenshotFile = new File(filePath);
-
-                // Determine the base folder to relativize against.
-                // If it's absolute, try to find "screenshots" in the path or use parent.
-                File screenshotsDir = new File("screenshots"); // Default fallback
-                if (screenshotFile.isAbsolute()) {
-                    String path = screenshotFile.getAbsolutePath();
-                    int index = path.indexOf("screenshots");
-                    if (index != -1) {
-                        // +11 covers "screenshots" length
-                        String basePath = path.substring(0, index + 11);
-                        screenshotsDir = new File(basePath);
-                    } else {
-                        screenshotsDir = screenshotFile.getParentFile();
-                    }
-                }
-
-                String displayDecoratedPath = ScreenshotPathGenerator.getScreenshotNotificationText(
-                        screenshotFile,
-                        screenshotsDir,
-                        config.displayRelativePath);
-
-                // Replace the text content if it's a translatable "screenshot.success"
-                if (original.getContent() instanceof net.minecraft.text.TranslatableTextContent translatable) {
-                    if ("screenshot.success".equals(translatable.getKey())) {
-                        Object[] args = translatable.getArgs();
-                        if (args.length > 0 && args[0] instanceof net.minecraft.text.Text fileComponent) {
-                            // Create new component with the relative path but same style (click event)
-                            net.minecraft.text.MutableText newFileComponent = net.minecraft.text.Text
-                                    .literal(displayDecoratedPath)
-                                    .setStyle(fileComponent.getStyle());
-
-                            // Return new success message with updated link text
-                            return net.minecraft.text.Text.translatable("screenshot.success", newFileComponent);
-                        }
+                        // Return new success message with updated link text
+                        return net.minecraft.text.Text.translatable("screenshot.success", newFileComponent);
                     }
                 }
             }
@@ -111,5 +119,15 @@ public class ScreenshotRecorderMixin {
         }
 
         return original;
+    }
+
+    private static class FilePathInfo {
+        final File file;
+        final String relativePath;
+
+        FilePathInfo(File file, String relativePath) {
+            this.file = file;
+            this.relativePath = relativePath;
+        }
     }
 }

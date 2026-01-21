@@ -100,3 +100,81 @@ The goal is to improve the user experience by displaying the relative path (e.g.
 - [ ] Implement `ModifyArg` mixin in `ScreenshotRecorderMixin` using the tested logic.
 - [ ] Verify manually in-game.
 - [ ] Run `./gradlew build` to ensure no regressions.
+
+---
+
+## Revised Approach: Analysis of Implementation Attempts
+
+### Problem Summary
+
+All attempted approaches to intercept/modify the notification message have failed:
+
+- `@ModifyArg` on `Consumer.accept()` - Failed: Target not found (0/1 succeeded)
+- `@ModifyVariable` on Consumer parameter - Failed: Wrong ordinal / target not found
+- `@Redirect` on `Consumer.accept()` - Failed: Target not found (0/1 succeeded)
+- `@Inject` with `LocalCapture` - Failed: Local variable structure mismatch
+- `@ModifyVariable` with Consumer wrapper - Failed: Mixin transformation error
+
+**Root cause**: The `Consumer.accept()` call is likely inlined, wrapped in a lambda, or handled asynchronously, making it untargetable across Minecraft versions.
+
+### Current Implementation Status
+
+**Completed:**
+
+- ✅ Step 1: Added `displayRelativePath` to `ModConfig`
+- ✅ Step 2: Added UI toggle in `ModMenuIntegration`
+- ✅ Step 3: Implemented `getScreenshotNotificationText` in `ScreenshotPathGenerator`
+- ✅ Step 4: Added unit tests for notification text logic
+
+**Blocked:**
+
+- ❌ Step 5: Cannot reliably intercept/modify the screenshot notification message
+
+### Alternative Approaches Considered
+
+#### Option 1: Dual-Message Approach (Safe)
+
+**Strategy:** Let vanilla notification go through, send additional message with relative path.
+
+**Benefits:**
+
+- ✅ No complex mixin targeting
+- ✅ Works across all Minecraft versions
+- ✅ No risk of crashes
+- ✅ Simple and maintainable
+
+**Trade-offs:**
+
+- ❌ User sees TWO messages instead of one modified message
+
+**Implementation:**
+
+```java
+@Inject(
+    method = "saveScreenshot(...)",
+    at = @At("TAIL")
+)
+private static void sendRelativePathNotification(...) {
+    String relativePath = RELATIVE_PATH.get();
+    if (relativePath != null) {
+        messageReceiver.accept(Text.literal("Location: " + relativePath));
+    }
+}
+```
+
+#### Option 2: Single-Message with Cancellation (Risky)
+
+**Strategy:** Try to cancel vanilla message and replace with custom one.
+
+**Risk:** The `INVOKE` target for `Consumer.accept()` is untargetable (same issue as @Redirect).
+
+### Recommendation for Future Work
+
+This feature should be **deferred until a reliable cross-version solution is found**. Consider:
+
+1. **Wait for Fabric API updates** that might provide better hooks for screenshot events
+2. **Explore alternative UI approaches** (e.g., overlay, HUD element instead of chat message)
+3. **Use the dual-message approach** if any notification is better than none
+4. **Research other mods** that successfully modify screenshot notifications
+
+The infrastructure (config, UI, path generation, tests) is **complete and tested**, so when a reliable injection strategy is found, it can be quickly integrated.
