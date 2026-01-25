@@ -94,16 +94,15 @@ public class ModMenuIntegration implements ModMenuApi {
                                         .setTooltip(Text.literal("Click to view detailed grouping mode information"))
                                         .build());
 
-                        // TODO: Implement Issue #6 - Add metadata toggle
-                        // // Entry: Enable Metadata
-                        // generalCategory.addEntry(entryBuilder
-                        // .startBooleanToggle(Text.literal("Enable Metadata"),
-                        // currentConfig.enableMetadata)
-                        // .setDefaultValue(true) // Default from ModConfig
-                        // .setTooltip(Text.literal(
-                        // "Save extra metadata with screenshots (World, Coords, etc.)"))
-                        // .setSaveConsumer(newValue -> currentConfig.enableMetadata = newValue)
-                        // .build());
+                        // Entry: Enable Metadata
+                        generalCategory.addEntry(entryBuilder
+                                        .startBooleanToggle(Text.literal("Embed Metadata"),
+                                                        currentConfig.embedMetadata)
+                                        .setDefaultValue(true)
+                                        .setTooltip(Text.literal(
+                                                        "Save extra metadata with screenshots (World, Coords, etc.)"))
+                                        .setSaveConsumer(newValue -> currentConfig.embedMetadata = newValue)
+                                        .build());
 
                         // --- Visual Styling (Placeholder) ---
                         // TODO: Issue #7 - Add visual styling logic here.
