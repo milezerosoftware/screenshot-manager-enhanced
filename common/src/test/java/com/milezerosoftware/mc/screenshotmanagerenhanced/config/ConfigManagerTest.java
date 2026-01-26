@@ -50,7 +50,7 @@ public class ConfigManagerTest {
 
         assertNotNull(config);
         assertEquals(GroupingMode.WORLD, config.groupingMode);
-        assertTrue(config.enableMetadata);
+        assertFalse(config.embedMetadata);
         assertTrue(Files.exists(configFile), "Config file should be created if missing");
     }
 
