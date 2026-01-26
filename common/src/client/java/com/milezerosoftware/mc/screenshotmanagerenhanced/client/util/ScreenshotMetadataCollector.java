@@ -7,18 +7,51 @@ import net.minecraft.SharedConstants;
 import net.minecraft.stat.Stats;
 import net.minecraft.util.math.BlockPos;
 
+/**
+ * Collects metadata from the current Minecraft game state for embedding into
+ * screenshots.
+ * 
+ * <p>
+ * This collector gathers information about the current world, player position,
+ * biome, dimension, and other game state details. All data is collected on the
+ * Render thread to ensure access to game state objects.
+ * </p>
+ * 
+ * <p>
+ * The collected metadata is formatted for human readability:
+ * </p>
+ * <ul>
+ * <li>Dimensions and biomes use Pascal Case (e.g., "The Nether", "Birch
+ * Forest")</li>
+ * <li>Coordinates use labeled format (e.g., "x: 70, y: 87, z: 159")</li>
+ * </ul>
+ */
 public class ScreenshotMetadataCollector {
 
+    /**
+     * Collects metadata from the current game state.
+     * 
+     * <p>
+     * This method must be called from the Render thread to ensure
+     * access to client-side game objects (player, world, etc.).
+     * </p>
+     * 
+     * <p>
+     * Handles edge cases gracefully, providing "Unknown" fallbacks
+     * when game state is unavailable (e.g., screenshot from main menu).
+     * </p>
+     *
+     * @return A populated {@link MetadataHandler.ScreenshotMetadata} instance
+     */
     public static MetadataHandler.ScreenshotMetadata collect() {
         MinecraftClient client = MinecraftClient.getInstance();
         ClientPlayerEntity player = client.player;
         ClientWorld world = client.world;
 
         // Fallbacks for edge cases (e.g., screenshot from menu)
-        String worldName = WorldUtils.getWorldId(); // Already handles null
+        String worldName = WorldUtils.getWorldId();
 
-        // Dimension - formatted as Pascal Case (e.g., "The Nether" instead of
-        // "the_nether")
+        // Dimension - formatted as Pascal Case
         String dimension = world != null
                 ? toPascalCase(world.getRegistryKey().getValue().getPath())
                 : "Unknown";
@@ -30,9 +63,7 @@ public class ScreenshotMetadataCollector {
         double days = world != null ? world.getTimeOfDay() / 24000.0 : 0;
         String daysPlayed = String.format("%.2f d", days);
 
-        // Real-Time World Age (Time with World Open)
-        // Note: 1 tick = 0.05 seconds. 1 day = 1728000 ticks.
-        // We use Math.max to avoid potential issues if stat is missing/0
+        // Real-Time World Age (player's total play time in this world)
         int totalTicks = 0;
         if (player != null) {
             try {
@@ -55,7 +86,7 @@ public class ScreenshotMetadataCollector {
                 : "Unknown";
         String minecraftVersion = getMinecraftVersionName();
 
-        // Biome - formatted as Pascal Case (e.g., "Plains" instead of "plains")
+        // Biome - formatted as Pascal Case
         String biome = "Unknown";
         if (world != null && player != null) {
             try {
@@ -79,7 +110,10 @@ public class ScreenshotMetadataCollector {
     }
 
     /**
-     * Formats player coordinates as "x: 12, y: 80, z: 30"
+     * Formats player coordinates as a labeled string.
+     *
+     * @param player The player entity, or null if unavailable
+     * @return Formatted coordinates string (e.g., "x: 70, y: 87, z: 159")
      */
     private static String formatCoordinates(ClientPlayerEntity player) {
         if (player == null) {
@@ -90,8 +124,19 @@ public class ScreenshotMetadataCollector {
     }
 
     /**
-     * Converts snake_case or lowercase to Pascal Case.
-     * e.g., "the_nether" -> "The Nether", "plains" -> "Plains"
+     * Converts snake_case or lowercase identifiers to Pascal Case with spaces.
+     * 
+     * <p>
+     * Examples:
+     * </p>
+     * <ul>
+     * <li>"the_nether" → "The Nether"</li>
+     * <li>"plains" → "Plains"</li>
+     * <li>"birch_forest" → "Birch Forest"</li>
+     * </ul>
+     *
+     * @param input The input string in snake_case or lowercase
+     * @return The formatted Pascal Case string
      */
     private static String toPascalCase(String input) {
         if (input == null || input.isEmpty()) {
@@ -120,12 +165,21 @@ public class ScreenshotMetadataCollector {
      * Gets the Minecraft version name using reflection for cross-version
      * compatibility.
      * 
+     * <p>
      * The GameVersion interface changed between Minecraft versions:
-     * - 1.21.8+: Uses name() method
-     * - Earlier versions (1.21.5 and below): Uses getName() method
+     * </p>
+     * <ul>
+     * <li>1.21.8+: Uses {@code name()} method</li>
+     * <li>Earlier versions: Uses {@code getName()} method</li>
+     * </ul>
      * 
+     * <p>
+     * This method tries both approaches via reflection to maintain
+     * compatibility across multiple Minecraft versions.
+     * </p>
+     *
      * @return The Minecraft version string (e.g., "1.21.8"), or "Unknown" if
-     *         retrieval fails.
+     *         retrieval fails
      */
     private static String getMinecraftVersionName() {
         try {
@@ -151,7 +205,6 @@ public class ScreenshotMetadataCollector {
             return gameVersion.toString();
 
         } catch (Exception e) {
-            System.err.println("[Screenshot Manager Enhanced] Failed to get Minecraft version: " + e.getMessage());
             return "Unknown";
         }
     }

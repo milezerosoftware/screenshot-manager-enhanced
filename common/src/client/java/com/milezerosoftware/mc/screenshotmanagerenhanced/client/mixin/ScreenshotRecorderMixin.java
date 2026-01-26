@@ -8,20 +8,58 @@ import net.minecraft.client.util.ScreenshotRecorder;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
+/**
+ * Mixin for {@link ScreenshotRecorder} that intercepts screenshot file path
+ * generation.
+ * 
+ * <p>
+ * This mixin provides two key features:
+ * </p>
+ * <ul>
+ * <li>Custom screenshot directory organization based on world/server name</li>
+ * <li>XMP metadata embedding into screenshot PNG files</li>
+ * </ul>
+ * 
+ * <p>
+ * The mixin intercepts the {@code getScreenshotFilename} method to redirect
+ * screenshots to organized subdirectories and optionally embed metadata.
+ * </p>
+ */
 @Mixin(ScreenshotRecorder.class)
 public class ScreenshotRecorderMixin {
 
-    // ThreadLocal to pass metadata task from Render thread to IO thread
-    private static final ThreadLocal<com.milezerosoftware.mc.screenshotmanagerenhanced.client.util.MetadataTask> PENDING_METADATA = new ThreadLocal<>();
+    private static final int FILE_POLL_INTERVAL_MS = 100;
+    private static final int FILE_POLL_MAX_ATTEMPTS = 100;
+    private static final int FILE_WRITE_DELAY_MS = 200;
 
-    // Intermediary: method_1660 [5, 6]
+    /**
+     * Intercepts screenshot filename generation to provide custom paths and
+     * metadata embedding.
+     * 
+     * <p>
+     * This injection runs at the HEAD of {@code getScreenshotFilename}, cancelling
+     * the original method and providing a custom file path based on the current
+     * world or server context.
+     * </p>
+     * 
+     * <p>
+     * When metadata embedding is enabled, this method also:
+     * </p>
+     * <ol>
+     * <li>Collects metadata from the current game state (on Render thread)</li>
+     * <li>Spawns a daemon thread to wait for the file to be written</li>
+     * <li>Triggers async metadata embedding once the file exists</li>
+     * </ol>
+     *
+     * @param gameDir The game directory (usually .minecraft)
+     * @param cir     Callback info for returning the custom file path
+     */
     @Inject(method = "getScreenshotFilename(Ljava/io/File;)Ljava/io/File;", at = @At("HEAD"), cancellable = true)
     private static void onGetScreenshotFilename(File gameDir, CallbackInfoReturnable<File> cir) {
         // Get the sanitized world/server name
@@ -31,7 +69,7 @@ public class ScreenshotRecorderMixin {
         ModConfig config = ConfigManager.getInstance();
 
         // Use the centralized path generator
-        File screenshotFile = ScreenshotPathGenerator.getScreenshotDirectory(
+        File screenshotDir = ScreenshotPathGenerator.getScreenshotDirectory(
                 gameDir,
                 config,
                 rawWorldId,
@@ -40,64 +78,66 @@ public class ScreenshotRecorderMixin {
                 new Date());
 
         // Ensure the directory exists
-        if (!screenshotFile.exists()) {
-            screenshotFile.mkdirs();
+        if (!screenshotDir.exists()) {
+            screenshotDir.mkdirs();
         }
 
         // Maintain standard vanilla naming: YYYY-MM-DD_HH.MM.SS.png
         String timestamp = new SimpleDateFormat("yyyy-MM-dd_HH.mm.ss").format(new Date());
-        File finalFile = new File(screenshotFile, timestamp + ".png");
+        File finalFile = new File(screenshotDir, timestamp + ".png");
 
         // Handle filename collisions by appending a suffix
         int i = 1;
         while (finalFile.exists()) {
-            finalFile = new File(screenshotFile, timestamp + "_" + (i++) + ".png");
+            finalFile = new File(screenshotDir, timestamp + "_" + (i++) + ".png");
         }
 
-        System.out.println(
-                "[Screenshot Manager] Phase 1 (Render Thread): Generated file path: " + finalFile.getAbsolutePath());
-
-        // Collect metadata NOW (on Render thread where we have access to world/player)
-        // Then start async writer that polls for file existence
+        // Collect metadata and start async writer if enabled
         if (config.embedMetadata) {
-            System.out.println("[Screenshot Manager] Metadata embedding enabled, collecting metadata...");
-            var metadata = com.milezerosoftware.mc.screenshotmanagerenhanced.client.util.ScreenshotMetadataCollector
-                    .collect();
-            System.out.println("[Screenshot Manager] Metadata collected, starting async file watcher...");
-
-            // Start async thread that waits for file to exist, then writes metadata
-            final File targetFile = finalFile;
-            Thread writerThread = new Thread(() -> {
-                try {
-                    // Wait for file to exist (poll every 100ms, timeout after 10 seconds)
-                    int maxAttempts = 100;
-                    int attempts = 0;
-                    while (!targetFile.exists() && attempts < maxAttempts) {
-                        Thread.sleep(100);
-                        attempts++;
-                    }
-
-                    if (targetFile.exists()) {
-                        System.out.println("[Screenshot Manager] File detected: " + targetFile.getAbsolutePath());
-                        // Small delay to ensure file is fully written
-                        Thread.sleep(200);
-                        com.milezerosoftware.mc.screenshotmanagerenhanced.client.util.MetadataHandler
-                                .writeMetadataAsync(targetFile, metadata);
-                    } else {
-                        System.err.println(
-                                "[Screenshot Manager] Timeout waiting for file: " + targetFile.getAbsolutePath());
-                    }
-                } catch (InterruptedException e) {
-                    System.err.println("[Screenshot Manager] File watcher interrupted: " + e.getMessage());
-                }
-            }, "ScreenshotFileWatcher");
-            writerThread.setDaemon(true);
-            writerThread.start();
-        } else {
-            System.out.println("[Screenshot Manager] Metadata embedding disabled, skipping");
+            collectAndEmbedMetadata(finalFile);
         }
 
         // Set the return value and cancel original method execution
         cir.setReturnValue(finalFile);
+    }
+
+    /**
+     * Collects metadata on the Render thread and spawns an async writer.
+     * 
+     * <p>
+     * Metadata must be collected on the Render thread because it requires
+     * access to game state (world, player, etc.). The actual file writing
+     * is done asynchronously to avoid blocking.
+     * </p>
+     *
+     * @param targetFile The screenshot file that will be created
+     */
+    private static void collectAndEmbedMetadata(File targetFile) {
+        var metadata = com.milezerosoftware.mc.screenshotmanagerenhanced.client.util.ScreenshotMetadataCollector
+                .collect();
+
+        // Start async thread that waits for file to exist, then writes metadata
+        Thread writerThread = new Thread(() -> {
+            try {
+                // Wait for file to exist (poll every 100ms, timeout after 10 seconds)
+                int attempts = 0;
+                while (!targetFile.exists() && attempts < FILE_POLL_MAX_ATTEMPTS) {
+                    Thread.sleep(FILE_POLL_INTERVAL_MS);
+                    attempts++;
+                }
+
+                if (targetFile.exists()) {
+                    // Small delay to ensure file is fully written
+                    Thread.sleep(FILE_WRITE_DELAY_MS);
+                    com.milezerosoftware.mc.screenshotmanagerenhanced.client.util.MetadataHandler
+                            .writeMetadataAsync(targetFile, metadata);
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }, "ScreenshotFileWatcher");
+
+        writerThread.setDaemon(true);
+        writerThread.start();
     }
 }
