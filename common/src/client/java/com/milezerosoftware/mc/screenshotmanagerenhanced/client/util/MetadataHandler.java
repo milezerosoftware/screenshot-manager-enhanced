@@ -1,9 +1,9 @@
 package com.milezerosoftware.mc.screenshotmanagerenhanced.client.util;
 
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.zip.CRC32;
 
 /**
@@ -43,7 +43,10 @@ public class MetadataHandler {
             try {
                 writeMetadata(file, metadata);
             } catch (Exception e) {
-                // Silently fail - metadata embedding is non-critical
+                // Log the exception - metadata embedding is non-critical but errors aid
+                // debugging
+                System.err.println("[Screenshot Manager Enhanced] Failed to embed metadata: " + e.getMessage());
+                e.printStackTrace();
             }
         }, "ScreenshotMetadataWriter");
 
@@ -73,10 +76,10 @@ public class MetadataHandler {
         // Wait for file to be fully written (size stability check)
         waitForFileStability(file);
 
-        // Read the existing PNG
-        BufferedImage image = ImageIO.read(file);
-        if (image == null) {
-            throw new IOException("ImageIO.read() returned null - file may be corrupted");
+        // Read the existing PNG bytes directly (avoids slow re-encoding)
+        byte[] pngData = Files.readAllBytes(file.toPath());
+        if (pngData.length == 0) {
+            throw new IOException("File is empty - may be corrupted: " + file.getAbsolutePath());
         }
 
         // Construct XMP XML
@@ -95,16 +98,13 @@ public class MetadataHandler {
 
         // Write to temp file with XMP chunk
         File tempFile = new File(file.getParentFile(), file.getName() + ".tmp");
-        writePngWithXmp(image, tempFile, xmpXml);
+        writePngWithXmp(pngData, tempFile, xmpXml);
 
-        // Atomic replace
+        // Atomic replace using Files.move (safer on Windows, prevents data loss)
         if (tempFile.exists() && tempFile.length() > 0) {
-            if (!file.delete()) {
-                throw new IOException("Failed to delete original file: " + file.getAbsolutePath());
-            }
-            if (!tempFile.renameTo(file)) {
-                throw new IOException("Failed to rename temp file to: " + file.getAbsolutePath());
-            }
+            Files.move(tempFile.toPath(), file.toPath(),
+                    StandardCopyOption.REPLACE_EXISTING,
+                    StandardCopyOption.ATOMIC_MOVE);
         } else {
             throw new IOException("Temp file is missing or empty");
         }
@@ -159,15 +159,12 @@ public class MetadataHandler {
      * avoiding the "Text chunk found after IDAT" warning from some readers.
      * </p>
      *
-     * @param image  The image to write
-     * @param output The output file
-     * @param xmpXml The XMP XML string to embed
+     * @param pngData The raw PNG byte data
+     * @param output  The output file
+     * @param xmpXml  The XMP XML string to embed
      * @throws IOException If writing fails
      */
-    private static void writePngWithXmp(BufferedImage image, File output, String xmpXml) throws IOException {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        ImageIO.write(image, "PNG", baos);
-        byte[] pngData = baos.toByteArray();
+    private static void writePngWithXmp(byte[] pngData, File output, String xmpXml) throws IOException {
 
         // Find the first IDAT chunk position
         int idatPos = findChunkPosition(pngData, "IDAT");
