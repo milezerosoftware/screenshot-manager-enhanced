@@ -10,6 +10,7 @@ A mod designed to keep your Minecraft screenshots organized automatically. Say g
 
 * **Automatic Organization**: Screenshots are instantly sorted into subfolders upon capture.
 * **Per-World Configuration**: Customize settings for you single-player or specific server worlds.
+* **In-Game Configuration**: Fully configurable via [Mod Menu](https://modrinth.com/mod/modmenu)
 * **Flexible Grouping Modes**: Customize how you want your folders structured. The mod generates paths based on your current context.
   * **`WORLD`** (Default): Groups screenshots by the world or server name.
     * Example: `screenshots/My_Survival_World/`
@@ -27,10 +28,14 @@ A mod designed to keep your Minecraft screenshots organized automatically. Say g
   * **`NONE`**: Disables grouping. Screenshots are saved directly in the screenshots folder (standard Minecraft behavior).
     * Example: `screenshots/`
 
-#### *Coming Soon!*
+### ⚗️ Advanced Features
 
-* **Metadata Support**: Optional metadata saving (configurable).
-* **In-Game Config**: Fully configurable via [Mod Menu](https://modrinth.com/mod/modmenu) and [Cloth Config](https://modrinth.com/mod/cloth-config).
+* **Metadata Support**: Automatically embeds rich game details directly into the screenshot file (XMP format). This data travels with the image!
+  * **World Context**: World Name, Dimension, Biome
+  * **Location**: Exact X, Y, Z Coordinates
+  * **Time**: In-game Days Played, World Age
+  * **Game State**: Difficulty, Game Mode, Minecraft Version
+
 
 ## 📥 Installation
 
