@@ -27,6 +27,10 @@ dependencies {
     }
     // ModMenu
     modImplementation("com.terraformersmc:modmenu:${project.modmenu_version}")
+    
+    // Apache Commons Imaging for Metadata
+    implementation "org.apache.commons:commons-imaging:1.0.0-alpha5"
+    include "org.apache.commons:commons-imaging:1.0.0-alpha5"
 }
 
 loom {

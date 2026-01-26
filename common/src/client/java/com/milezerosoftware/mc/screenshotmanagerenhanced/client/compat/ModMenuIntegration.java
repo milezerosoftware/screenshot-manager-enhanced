@@ -36,7 +36,7 @@ public class ModMenuIntegration implements ModMenuApi {
 
                         // Entry: Grouping Mode Selector
                         generalCategory.addEntry(entryBuilder
-                                        .startEnumSelector(Text.literal("§fGrouping Mode"), GroupingMode.class,
+                                        .startEnumSelector(Text.literal("§6Grouping Mode§r"), GroupingMode.class,
                                                         currentConfig.groupingMode)
                                         .setDefaultValue(GroupingMode.WORLD)
                                         .setEnumNameProvider(enumValue -> {
@@ -94,16 +94,37 @@ public class ModMenuIntegration implements ModMenuApi {
                                         .setTooltip(Text.literal("Click to view detailed grouping mode information"))
                                         .build());
 
-                        // TODO: Implement Issue #6 - Add metadata toggle
-                        // // Entry: Enable Metadata
-                        // generalCategory.addEntry(entryBuilder
-                        // .startBooleanToggle(Text.literal("Enable Metadata"),
-                        // currentConfig.enableMetadata)
-                        // .setDefaultValue(true) // Default from ModConfig
-                        // .setTooltip(Text.literal(
-                        // "Save extra metadata with screenshots (World, Coords, etc.)"))
-                        // .setSaveConsumer(newValue -> currentConfig.enableMetadata = newValue)
-                        // .build());
+                        // Spacer between Grouping Mode Guide and Advanced Features
+                        generalCategory.addEntry(entryBuilder.startTextDescription(Text.literal(" ")).build());
+
+                        // Text description for Advanced Features section
+                        generalCategory.addEntry(entryBuilder.startTextDescription(
+                                        Text.literal("§fAdvanced screenshot features that are not enabled by default.§r"))
+                                        .build());
+
+                        // Advanced Features subcategory
+                        generalCategory.addEntry(entryBuilder.startSubCategory(
+                                        Text.literal("§3Advanced Features§r"),
+                                        java.util.List.of(
+                                                        // Description text for Advanced Features section
+                                                        entryBuilder.startTextDescription(
+                                                                        Text.literal("Enable the following to add Minecraft metadata to screenshots."))
+                                                                        .setTooltip(Text.literal(
+                                                                                        "Add metadata to screenshots (i.e. World Name, Coords, etc.)"))
+                                                                        .build(),
+                                                        // Entry: Enable Metadata
+                                                        entryBuilder.startBooleanToggle(
+                                                                        Text.literal("§6Toggle Metadata§r"),
+                                                                        currentConfig.embedMetadata)
+                                                                        .setDefaultValue(false)
+                                                                        .setTooltip(Text.literal(
+                                                                                        "Enable/Disable adding metadata to screenshots"))
+                                                                        .setSaveConsumer(
+                                                                                        newValue -> currentConfig.embedMetadata = newValue)
+                                                                        .build()))
+                                        .setExpanded(false) // Collapsed by default
+                                        .setTooltip(Text.literal("Click to view Advanced Features"))
+                                        .build());
 
                         // --- Visual Styling (Placeholder) ---
                         // TODO: Issue #7 - Add visual styling logic here.
