@@ -24,6 +24,18 @@ public class ScreenshotPathGenerator {
      */
     public static File getScreenshotDirectory(File screenshotsDir, ModConfig config,
             String rawWorldId, String safeWorldId, String dimension, Date date) {
+        // Check for global custom path override (requires enabled + acknowledged +
+        // valid path)
+        if (config.customSavePathEnabled &&
+                config.customPathConfig != null &&
+                config.customPathConfig.hasAcknowledgedWarning &&
+                !config.customPathConfig.customPath.isEmpty()) {
+            File customDir = new File(config.customPathConfig.customPath);
+            if (customDir.isAbsolute() && customDir.isDirectory()) {
+                screenshotsDir = customDir; // Use custom path as new base
+            }
+        }
+
         // 1. Check for Per-World Config
         WorldConfig worldConfig = config.worldRules.get(rawWorldId);
 

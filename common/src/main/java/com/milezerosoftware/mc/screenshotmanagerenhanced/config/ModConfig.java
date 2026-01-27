@@ -8,6 +8,8 @@ public class ModConfig {
     public boolean embedMetadata = false; // Default to disabled
     public boolean displayRelativePath = true; // Default to enabled
     public GroupingMode groupingMode = GroupingMode.WORLD; // Default to WORLD
+    public boolean customSavePathEnabled = false; // Custom save path feature toggle
+    public CustomPathConfig customPathConfig = new CustomPathConfig(); // Custom path settings
 
     // Per-World Rules: Key = WorldName/IP, Value = Configuration
     public Map<String, WorldConfig> worldRules = new HashMap<>();

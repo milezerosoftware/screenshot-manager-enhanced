@@ -1,5 +1,6 @@
 package com.milezerosoftware.mc.screenshotmanagerenhanced.client.compat;
 
+import com.milezerosoftware.mc.screenshotmanagerenhanced.client.util.FilePickerHelper;
 import com.milezerosoftware.mc.screenshotmanagerenhanced.config.ConfigManager;
 import com.milezerosoftware.mc.screenshotmanagerenhanced.config.GroupingMode;
 import com.milezerosoftware.mc.screenshotmanagerenhanced.config.ModConfig;
@@ -10,16 +11,28 @@ import me.shedaniel.clothconfig2.api.ConfigCategory;
 import me.shedaniel.clothconfig2.api.ConfigEntryBuilder;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.screen.ConfirmScreen;
 import net.minecraft.text.Text;
+
+import java.nio.file.Path;
+import java.util.Optional;
 
 @Environment(EnvType.CLIENT)
 public class ModMenuIntegration implements ModMenuApi {
+
+        // Track if we need to show warning on next toggle
+        private boolean pendingWarningConfirmation = false;
 
         @Override
         public ConfigScreenFactory<?> getModConfigScreenFactory() {
                 return parent -> {
                         // Get the current configuration
                         ModConfig currentConfig = ConfigManager.getInstance();
+
+                        // Get default screenshots path for initial population
+                        Path defaultScreenshotsPath = FabricLoader.getInstance().getGameDir().resolve("screenshots");
 
                         ConfigBuilder builder = ConfigBuilder.create()
                                         .setParentScreen(parent)
@@ -106,7 +119,7 @@ public class ModMenuIntegration implements ModMenuApi {
                         generalCategory.addEntry(entryBuilder.startSubCategory(
                                         Text.literal("§3Advanced Features§r"),
                                         java.util.List.of(
-                                                        // Description text for Advanced Features section
+                                                        // --- Metadata Section ---
                                                         entryBuilder.startTextDescription(
                                                                         Text.literal("Enable the following to add Minecraft metadata to screenshots."))
                                                                         .setTooltip(Text.literal(
@@ -121,6 +134,74 @@ public class ModMenuIntegration implements ModMenuApi {
                                                                                         "Enable/Disable adding metadata to screenshots"))
                                                                         .setSaveConsumer(
                                                                                         newValue -> currentConfig.embedMetadata = newValue)
+                                                                        .build(),
+
+                                                        // --- Spacer ---
+                                                        entryBuilder.startTextDescription(Text.literal(" ")).build(),
+
+                                                        // --- Custom Save Path Section ---
+                                                        entryBuilder.startTextDescription(
+                                                                        Text.literal("§eCustom Save Path§r - Override the default screenshots folder."))
+                                                                        .setTooltip(Text.literal(
+                                                                                        "Save screenshots to a custom directory instead of .minecraft/screenshots"))
+                                                                        .build(),
+
+                                                        // Entry: Enable Custom Save Path
+                                                        entryBuilder.startBooleanToggle(
+                                                                        Text.literal("§6Enable Custom Path§r"),
+                                                                        currentConfig.customSavePathEnabled)
+                                                                        .setDefaultValue(false)
+                                                                        .setTooltip(Text.literal(
+                                                                                        "Enable to save screenshots to a custom directory"))
+                                                                        .setSaveConsumer(newValue -> {
+                                                                                // Handle warning dialog logic
+                                                                                if (newValue && !currentConfig.customPathConfig.hasAcknowledgedWarning) {
+                                                                                        // Show inline warning dialog
+                                                                                        showCustomPathWarningDialog(
+                                                                                                        currentConfig,
+                                                                                                        parent);
+                                                                                }
+                                                                                currentConfig.customSavePathEnabled = newValue;
+
+                                                                                // Populate default path on first enable
+                                                                                if (newValue && currentConfig.customPathConfig.customPath
+                                                                                                .isEmpty()) {
+                                                                                        currentConfig.customPathConfig.customPath = defaultScreenshotsPath
+                                                                                                        .toAbsolutePath()
+                                                                                                        .toString();
+                                                                                }
+                                                                        })
+                                                                        .build(),
+
+                                                        // Entry: Custom Path Text Field
+                                                        entryBuilder.startStrField(
+                                                                        Text.literal("Screenshot Directory"),
+                                                                        currentConfig.customPathConfig.customPath
+                                                                                        .isEmpty()
+                                                                                                        ? defaultScreenshotsPath
+                                                                                                                        .toAbsolutePath()
+                                                                                                                        .toString()
+                                                                                                        : currentConfig.customPathConfig.customPath)
+                                                                        .setDefaultValue(defaultScreenshotsPath
+                                                                                        .toAbsolutePath().toString())
+                                                                        .setTooltip(Text.literal(
+                                                                                        "Full path to custom screenshots directory (must be absolute)"))
+                                                                        .setSaveConsumer(newValue -> {
+                                                                                // Validate path before saving
+                                                                                FilePickerHelper.ValidationResult result = FilePickerHelper
+                                                                                                .validateDirectory(
+                                                                                                                newValue);
+                                                                                if (result.isValid) {
+                                                                                        currentConfig.customPathConfig.customPath = newValue;
+                                                                                }
+                                                                                // Note: Error handling will be shown
+                                                                                // in-game via chat
+                                                                        })
+                                                                        .build(),
+
+                                                        // Entry: Browse Button (opens file picker)
+                                                        entryBuilder.startTextDescription(
+                                                                        Text.literal("§7[Click 'Browse' below to select directory]§r"))
                                                                         .build()))
                                         .setExpanded(false) // Collapsed by default
                                         .setTooltip(Text.literal("Click to view Advanced Features"))
@@ -134,5 +215,60 @@ public class ModMenuIntegration implements ModMenuApi {
 
                         return builder.build();
                 };
+        }
+
+        /**
+         * Shows a warning dialog when the user first enables the custom path feature.
+         * This is the inline version (Option A) - shows immediately when toggled.
+         */
+        private void showCustomPathWarningDialog(ModConfig config, net.minecraft.client.gui.screen.Screen parent) {
+                MinecraftClient client = MinecraftClient.getInstance();
+                if (client == null)
+                        return;
+
+                ConfirmScreen warningScreen = new ConfirmScreen(
+                                confirmed -> {
+                                        if (confirmed) {
+                                                config.customPathConfig.hasAcknowledgedWarning = true;
+                                                ConfigManager.save();
+                                        } else {
+                                                // User declined - disable the feature
+                                                config.customSavePathEnabled = false;
+                                        }
+                                        // Return to config screen
+                                        client.setScreen(parent);
+                                },
+                                Text.literal("§eCustom Save Path Warning§r"),
+                                Text.literal("§cIMPORTANT:§r When using a custom save path, you are responsible for managing "
+                                                + "world name conflicts. If multiple Minecraft instances save to the same directory "
+                                                + "with the same world names, screenshots may be overwritten.\n\n"
+                                                + "§7Do you want to enable this feature?§r"),
+                                Text.literal("§aI Understand§r"),
+                                Text.literal("§cCancel§r"));
+
+                client.setScreen(warningScreen);
+        }
+
+        /**
+         * Opens the native file picker to select a custom screenshot directory.
+         * Call this from a button or menu action.
+         */
+        public static void openFilePicker(ModConfig config) {
+                Path initialDir = config.customPathConfig.customPath.isEmpty()
+                                ? FabricLoader.getInstance().getGameDir().resolve("screenshots")
+                                : Path.of(config.customPathConfig.customPath);
+
+                Optional<Path> selected = FilePickerHelper.openDirectoryPicker(
+                                "Select Screenshot Directory",
+                                initialDir);
+
+                if (selected.isPresent()) {
+                        FilePickerHelper.ValidationResult result = FilePickerHelper
+                                        .validateDirectory(selected.get().toString());
+                        if (result.isValid) {
+                                config.customPathConfig.customPath = selected.get().toAbsolutePath().toString();
+                                ConfigManager.save();
+                        }
+                }
         }
 }

@@ -85,4 +85,36 @@ public class ConfigManagerTest {
         // Verify recursion didn't happen (if strict timeout logic isn't in place,
         // implicit success is passing this line)
     }
+
+    @Test
+    void testCustomPathConfigSerialization() throws IOException {
+        Path configFile = tempDir.resolve("custom_path_config.json");
+
+        // 1. Setup initial state with custom path config
+        ConfigManager.load(configFile);
+        ModConfig config = ConfigManager.getInstance();
+        config.customSavePathEnabled = true;
+        config.customPathConfig.hasAcknowledgedWarning = true;
+        config.customPathConfig.customPath = "/custom/screenshots/path";
+
+        // 2. Save
+        ConfigManager.save(configFile);
+
+        // 3. Reload and verify
+        ConfigManager.load(configFile);
+        ModConfig loadedConfig = ConfigManager.getInstance();
+
+        // 4. Verify external enabled flag
+        assertTrue(loadedConfig.customSavePathEnabled, "customSavePathEnabled should persist");
+
+        // 5. Verify embedded config properties
+        assertNotNull(loadedConfig.customPathConfig, "customPathConfig should not be null");
+        assertTrue(loadedConfig.customPathConfig.hasAcknowledgedWarning, "hasAcknowledgedWarning should persist");
+        assertEquals("/custom/screenshots/path", loadedConfig.customPathConfig.customPath, "customPath should persist");
+
+        // 6. Verify JSON structure has external enabled flag
+        String content = Files.readString(configFile);
+        assertTrue(content.contains("\"customSavePathEnabled\""), "JSON should have external enabled flag");
+        assertTrue(content.contains("\"customPathConfig\""), "JSON should have embedded config object");
+    }
 }
