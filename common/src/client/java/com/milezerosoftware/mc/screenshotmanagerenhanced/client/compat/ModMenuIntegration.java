@@ -73,35 +73,23 @@ public class ModMenuIntegration implements ModMenuApi {
                                 .setTitle(Text.literal("Screenshot Manager Enhanced Settings"))
                                 // Centralized Warning Logic on Save
                                 .setSavingRunnable(() -> {
-                                        System.out.println("[DEBUG] SavingRunnable STARTED");
                                         // Update Advanced Settings state
                                         currentConfig.advancedSettings = currentConfig.customSavePathEnabled
                                                         || currentConfig.embedMetadata;
 
-                                        System.out.println("[DEBUG] currentConfig.customSavePathEnabled = "
-                                                        + currentConfig.customSavePathEnabled);
-                                        System.out.println("[DEBUG] currentConfig.hasAcknowledgedWarning = "
-                                                        + currentConfig.customPathConfig.hasAcknowledgedWarning);
-
                                         if (currentConfig.customSavePathEnabled
                                                         && !currentConfig.customPathConfig.hasAcknowledgedWarning) {
-                                                System.out.println(
-                                                                "[DEBUG] Condition MET: Enabled but UNACKNOWLEDGED.");
                                                 // User enabled it but hasn't acknowledged yet.
                                                 // 1. Temporarily disable to be safe
                                                 currentConfig.customSavePathEnabled = false;
                                                 ConfigManager.save();
-                                                System.out.println("[DEBUG] Config saved with enabled=false.");
 
                                                 // 2. Schedule warning dialog
-                                                System.out.println("[DEBUG] Scheduling Warning Dialog.");
                                                 showCustomPathWarningDialog(currentConfig, parent);
                                         } else {
-                                                System.out.println("[DEBUG] Condition NOT MET: Saving normally.");
                                                 // Standard save
                                                 ConfigManager.save();
                                         }
-                                        System.out.println("[DEBUG] SavingRunnable ENDED");
                                 })
                                 .setAlwaysShowTabs(false)
                                 .setTransparentBackground(true)
@@ -226,6 +214,16 @@ public class ModMenuIntegration implements ModMenuApi {
                                                                                                                                                 .toAbsolutePath()
                                                                                                                                                 .toString()
                                                                                                                                 : currentConfig.customPathConfig.customPath)))
+                                                                .setErrorSupplier(newValue -> {
+                                                                        FilePickerHelper.ValidationResult result = FilePickerHelper
+                                                                                        .validateDirectory(newValue);
+                                                                        if (!result.isValid) {
+                                                                                return java.util.Optional
+                                                                                                .of(Text.literal(
+                                                                                                                result.errorMessage));
+                                                                        }
+                                                                        return java.util.Optional.empty();
+                                                                })
                                                                 .setSaveConsumer(newValue -> {
                                                                         FilePickerHelper.ValidationResult result = FilePickerHelper
                                                                                         .validateDirectory(newValue);
@@ -242,29 +240,22 @@ public class ModMenuIntegration implements ModMenuApi {
         }
 
         private void showCustomPathWarningDialog(ModConfig config, Screen parent) {
-                System.out.println("[DEBUG] Application showCustomPathWarningDialog called.");
                 MinecraftClient client = MinecraftClient.getInstance();
                 if (client == null) {
-                        System.out.println("[DEBUG] MinecraftClient is NULL. Aborting.");
                         return;
                 }
 
                 ConfirmScreen warningScreen = new ConfirmScreen(
                                 confirmed -> {
-                                        System.out.println("[DEBUG] Warning Dialog Callback: " + confirmed);
                                         if (confirmed) {
                                                 config.customPathConfig.hasAcknowledgedWarning = true;
                                                 config.customSavePathEnabled = true;
                                                 ConfigManager.save();
-                                                System.out.println(
-                                                                "[DEBUG] Config saved: Enabled=true, Acknowledged=true");
                                         } else {
                                                 config.customSavePathEnabled = false;
                                                 ConfigManager.save();
-                                                System.out.println("[DEBUG] Use declined. Config saved: Enabled=false");
                                         }
                                         // Return to parent
-                                        System.out.println("[DEBUG] Returning to parent screen.");
                                         client.setScreen(parent);
                                 },
                                 Text.literal("§eCustom Save Path Warning§r"),
