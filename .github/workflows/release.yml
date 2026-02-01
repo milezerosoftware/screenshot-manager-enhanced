@@ -6,8 +6,12 @@ on:
   workflow_dispatch:
 
 jobs:
-  release:
+  build:
     runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        mc_ver: [1.21.11, 1.21.10, 1.21.8, 1.21.5, 1.21.4, 1.21.3, 1.21.1, 1.20.5-6]
     steps:
       - name: checkout repository
         uses: actions/checkout@v4
@@ -20,15 +24,67 @@ jobs:
           distribution: 'microsoft'
       - name: make gradle wrapper executable
         run: chmod +x ./gradlew
-      - name: build all versions
-        run: ./gradlew buildAllAll
-      - name: create release
-        uses: softprops/action-gh-release@v1
+      - name: build
+        run: ./gradlew :fabric:build -Pmc_ver=${{ matrix.mc_ver }}
+      - name: upload build artifacts
+        uses: actions/upload-artifact@v4
         with:
-          draft: true
-          generate_release_notes: true
-          append_body: true
-          files: |
+          name: build-${{ matrix.mc_ver }}
+          path: |
             fabric/build/libs/*.jar
             !fabric/build/libs/*-sources.jar
             !fabric/build/libs/*-dev.jar
+
+  publish:
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        mc_ver: [1.21.11, 1.21.10, 1.21.8, 1.21.5, 1.21.4, 1.21.3, 1.21.1, 1.20.5-6]
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v4
+      - name: download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-${{ matrix.mc_ver }}
+          path: artifacts/
+      
+      - name: publish to platforms
+        uses: Kir-Antipov/mc-publish@v3.3
+        with:
+          # Modrinth
+          modrinth-id: screenshot-manager-enhanced
+          modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
+          
+          # CurseForge (uncomment when ready)
+          # curseforge-id: YOUR_CURSEFORGE_PROJECT_ID
+          # curseforge-token: ${{ secrets.CURSEFORGE_TOKEN }}
+          
+          # GitHub Releases
+          github-tag: ${{ github.ref_name }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-generate-changelog: true
+          github-draft: true
+          
+          # Common settings
+          files: artifacts/*.jar
+          name: Screenshot Manager Enhanced ${{ github.ref_name }} for MC ${{ matrix.mc_ver }}
+          version: ${{ github.ref_name }}+${{ matrix.mc_ver }}
+          game-versions: ${{ matrix.mc_ver }}
+          loaders: fabric
+          version-type: release
+          changelog-file: CHANGELOG.md
+          
+          # Dependencies
+          dependencies: |
+            fabric-api(required)
+            cloth-config(required)
+            modmenu(optional)
+          
+          # Retry settings
+          retry-attempts: 2
+          retry-delay: 10000
