@@ -141,30 +141,23 @@ To build or run for a specific Minecraft version, use the `-Pmc_ver` property:
 
 ## 🚀 Release Process
 
-We support two ways to cut a release: **Automated** (Recommended) and **Manual**.
+Releases are automated via GitHub Actions. When you push a version tag, the workflow:
 
-### Option 1: Automated (GitHub Actions)
+1. Builds all supported Minecraft versions
+2. Publishes to **Modrinth** and **CurseForge**
+3. Creates a **GitHub Release** with attached JARs
 
-1. Update `mod_version` in `gradle.properties` (e.g., `1.0.1`).
-2. Commit the change: `git commit -am "chore: bump version to 1.0.1"`.
-3. Tag the commit: `git tag v1.0.1`.
-4. Push the tag: `git push origin v1.0.1`.
-5. The GitHub Action will automatically:
-    * Build all supported Minecraft versions (internal calls to `buildAllAll`).
-    * Create a GitHub Release named `v1.0.1`.
-    * Attach the built JARs for all versions to the release.
-
-### Option 2: Manual (CLI)
-
-You can create a GitHub release directly from your terminal. This will build all versions and upload them.
+**Quick steps:**
 
 ```bash
-export GITHUB_TOKEN=your_token_here
-./gradlew buildAllAll githubRelease
+# 1. Update version and changelog
+# 2. Commit and tag
+git commit -am "chore: release v1.2.0"
+git tag v1.2.0
+git push origin main && git push origin v1.2.0
 ```
 
-> [!IMPORTANT]
-> Ensure the git tag matches the `mod_version` in `gradle.properties` to avoid confusion.
+📖 **For full instructions**, see [RELEASE.md](RELEASE.md).
 
 ## 📄 License
 
