@@ -15,6 +15,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.3.0] - 2026-02-01
+
+### Added
+
+- **XMP Metadata Embedding** (#50): Screenshots can now include embedded metadata (World Name, Coordinates, Biome, Timestamp, Server IP) readable by tools like Lightroom and Photoshop
+- **Custom Save Path** (#52, #53): Define exactly where screenshots are saved — use cloud storage, external drives, or any folder you choose
+- **Advanced Features Section**: New collapsible settings area in Mod Menu for power-user options
+- **Gallery Documentation** (#54): New `Gallery.md` showcasing the mod's UI and features
+- **Automated Publishing** (#56): Releases now auto-publish to Modrinth and CurseForge via `mc-publish` GitHub Action
+- **Release Runbook**: New `RELEASE.md` with step-by-step instructions and Quick Reference Card
+- **Dynamic Version Matrix**: CI/CD workflows derive Minecraft versions from `versionProperties/` directory
+
+### Changed
+
+- Metadata embedding is disabled by default (opt-in via Mod Menu)
+- Custom path requires acknowledgment of warning dialog before enabling
+- Release workflow uses matrix strategy for parallel multi-version builds
+- Sources JAR skipped in release builds for faster builds (#57)
+- Updated README with simplified release process and Gallery link
+
+### Internal
+
+- Centralized version management — adding a new MC version only requires a new `.properties` file
+
+---
+
 ## [1.2.0] - 2026-01-24
 
 ### Added

@@ -137,7 +137,7 @@ To build or run for a specific Minecraft version, use the `-Pmc_ver` property:
 
 
 > [!NOTE]
-> Supported Minecraft versions are defined in `versionProperties/`. Currently supported: `1.21.10`, `1.21.8`, `1.20.6`, `1.20.5`.
+> Supported Minecraft versions are defined in `versionProperties/`. Currently supported: `1.21.11` thru `1.20.5`
 
 ## 🚀 Release Process
 
@@ -149,12 +149,22 @@ Releases are automated via GitHub Actions. When you push a version tag, the work
 
 **Quick steps:**
 
-```bash
-# 1. Update version and changelog
-# 2. Commit and tag
-git commit -am "chore: release v1.2.0"
-git tag v1.2.0
-git push origin main && git push origin v1.2.0
+``` text
+┌─────────────────────────────────────────────────────────┐
+│                    RELEASE WORKFLOW                     │
+├─────────────────────────────────────────────────────────┤
+│  1. Update CHANGELOG.md with release notes              │
+│  2. Update mod_version in gradle.properties             │
+│  3. git checkout -b release/X.Y.Z                       │
+│  4. git add . && git commit -m "chore: release vX.Y.Z"  │
+│  5. Open a PR and merge the PR                          │
+│  6. git checkout main && git pull                       │
+│  7. git tag vX.Y.Z                                      │
+│  8. git push origin vX.Y.Z                              │
+│  9. ☕ Wait ~5-10 min for builds                         │
+│  10. Verify uploads on Modrinth + CurseForge            │
+│  11. Publish GitHub release draft (optional)            │
+└─────────────────────────────────────────────────────────┘
 ```
 
 📖 **For full instructions**, see [RELEASE.md](RELEASE.md).
