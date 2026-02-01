@@ -6,12 +6,26 @@ on:
   workflow_dispatch:
 
 jobs:
+  get-versions:
+    runs-on: ubuntu-24.04
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v4
+      - name: read versions from versionProperties
+        id: set-matrix
+        run: |
+          versions=$(ls versionProperties/*.properties 2>/dev/null | xargs -n1 basename | sed 's/.properties$//' | grep -v gitkeep | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          echo "matrix=$versions" >> $GITHUB_OUTPUT
+
   build:
+    needs: get-versions
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
-        mc_ver: [1.21.11, 1.21.10, 1.21.8, 1.21.5, 1.21.4, 1.21.3, 1.21.1, 1.20.5-6]
+        mc_ver: ${{ fromJson(needs.get-versions.outputs.matrix) }}
     steps:
       - name: checkout repository
         uses: actions/checkout@v4
@@ -36,14 +50,14 @@ jobs:
             !fabric/build/libs/*-dev.jar
 
   publish:
-    needs: build
+    needs: [get-versions, build]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
     strategy:
       fail-fast: false
       matrix:
-        mc_ver: [1.21.11, 1.21.10, 1.21.8, 1.21.5, 1.21.4, 1.21.3, 1.21.1, 1.20.5-6]
+        mc_ver: ${{ fromJson(needs.get-versions.outputs.matrix) }}
     steps:
       - name: checkout repository
         uses: actions/checkout@v4
