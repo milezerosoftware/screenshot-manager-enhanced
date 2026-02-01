@@ -63,6 +63,14 @@ For those who prefer the manual route:
 4. **Install**: Drop the `.jar` files into your `.minecraft/mods` folder.
 5. **Launch**: Start Minecraft and enjoy organized screenshots!
 
+## 🖼️ Gallery
+
+Check out our [Gallery](Gallery.md) to see examples of:
+
+* Grouping Modes (World, Date, Dimension)
+* Metadata embedding
+* Mod Menu configuration
+
 ## ⚙️ Usage & Configuration
 
 Once installed, the mod works automatically with the default setting (Group by `WORLD`).
