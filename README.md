@@ -2,7 +2,7 @@
 
 ![License](https://img.shields.io/badge/license-Apache%202.0-blue)
 ![Fabric](https://img.shields.io/badge/modloader-Fabric-fee6ad)
-![Minecraft](https://img.shields.io/badge/minecraft-1.21.1-lightgrey)
+<!-- ![GitHub Sponsors](https://img.shields.io/github/sponsors/scriptmunkeeofficial) -->
 
 A mod designed to keep your Minecraft screenshots organized automatically. Say goodbye to a cluttered **screenshots** folder! This mod intelligently sorts your screenshots into folders based on the world, dimension, date, or a combination of these.
 
@@ -30,12 +30,15 @@ A mod designed to keep your Minecraft screenshots organized automatically. Say g
 
 ### ⚗️ Advanced Features
 
-* **Metadata Support**: Automatically embeds rich game details directly into the screenshot file (XMP format). This data travels with the image!
+* **Metadata Support** 🗃️: Automatically embeds rich game details directly into the screenshot file (XMP format). This data travels with the image!
   * **World Context**: World Name, Dimension, Biome
   * **Location**: Exact X, Y, Z Coordinates
   * **Time**: In-game Days Played, World Age
   * **Game State**: Difficulty, Game Mode, Minecraft Version
-
+* **Custom Save Location** 💾: Choose exactly where your screenshots go.
+  * Override the default `.minecraft/screenshots` location.
+  * Use any absolute path on your system (e.g., a shared network drive or cloud storage folder).
+  * *Note: Requires enabling advanced settings validation.*
 
 ## 📥 Installation
 
