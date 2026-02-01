@@ -2,18 +2,21 @@
 
 ## TL;DR Quick Reference
 
-```
+``` text
 ┌─────────────────────────────────────────────────────────┐
-│                    RELEASE WORKFLOW                      │
+│                    RELEASE WORKFLOW                     │
 ├─────────────────────────────────────────────────────────┤
 │  1. Update CHANGELOG.md with release notes              │
 │  2. Update mod_version in gradle.properties             │
-│  3. git add . && git commit -m "chore: release vX.Y.Z"  │
-│  4. git tag vX.Y.Z                                      │
-│  5. git push origin main && git push origin vX.Y.Z      │
-│  6. ☕ Wait ~5-10 min for builds                         │
-│  7. Verify uploads on Modrinth + CurseForge             │
-│  8. Publish GitHub release draft (optional)             │
+│  3. git checkout -b release/X.Y.Z                       │
+│  4. git add . && git commit -m "chore: release vX.Y.Z"  │
+│  5. Open a PR and merge the PR                          │
+│  6. git checkout main && git pull                       │
+│  7. git tag vX.Y.Z                                      │
+│  8. git push origin vX.Y.Z                              │
+│  9. ☕ Wait ~5-10 min for builds                         │
+│  10. Verify uploads on Modrinth + CurseForge            │
+│  11. Publish GitHub release draft (optional)            │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -49,17 +52,28 @@ mod_version=X.Y.Z
 ### Step 3: Commit and Tag
 
 ```bash
+# Checkout new branch
+git checkout -b release/X.Y.Z
+
 # Stage changes
 git add gradle.properties CHANGELOG.md
 
 # Commit with release message
 git commit -m "chore: release vX.Y.Z"
 
+# Push to remote
+git push origin release/X.Y.Z
+
+# Open a PR to merge release/X.Y.Z into main
+
+# Checkout main & pull changes
+git checkout main
+git pull
+
 # Create annotated tag
 git tag vX.Y.Z
 
-# Push everything
-git push origin main
+# Push tag to remote
 git push origin vX.Y.Z
 ```
 
