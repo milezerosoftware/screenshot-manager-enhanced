@@ -21,14 +21,9 @@ public abstract class GameMenuScreenMixin extends Screen {
 
     @Inject(at = @At("TAIL"), method = "initWidgets")
     private void addGalleryButton(CallbackInfo ci) {
-        // Use the standard screenshots directory as the entry point
-        // formatting:off
-        Path path = MinecraftClient.getInstance().runDirectory.toPath().resolve("screenshots");
-        // formatting:on
-
         // Use a small square button for the camera icon
         this.addDrawableChild(ButtonWidget.builder(Text.literal("📷"), button -> {
-            MinecraftClient.getInstance().setScreen(new GalleryScreen(path));
+            MinecraftClient.getInstance().setScreen(new GalleryScreen(this));
         }).dimensions(this.width / 2 + 104, this.height / 4 + 96 + -16, 20, 20).build());
     }
 }

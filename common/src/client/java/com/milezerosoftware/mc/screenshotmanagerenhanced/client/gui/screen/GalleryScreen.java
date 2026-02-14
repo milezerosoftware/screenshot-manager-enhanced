@@ -1,7 +1,10 @@
 package com.milezerosoftware.mc.screenshotmanagerenhanced.client.gui.screen;
 
 import com.milezerosoftware.mc.screenshotmanagerenhanced.client.render.ScreenshotTextureManager;
-import com.milezerosoftware.mc.screenshotmanagerenhanced.client.util.ClipboardUtil;
+import com.milezerosoftware.mc.screenshotmanagerenhanced.client.util.ScreenshotPathGenerator;
+import com.milezerosoftware.mc.screenshotmanagerenhanced.client.util.WorldUtils;
+import com.milezerosoftware.mc.screenshotmanagerenhanced.config.ConfigManager;
+import com.milezerosoftware.mc.screenshotmanagerenhanced.config.ModConfig;
 import io.wispforest.owo.ui.base.BaseOwoScreen;
 import io.wispforest.owo.ui.component.Components;
 import io.wispforest.owo.ui.component.LabelComponent;
@@ -12,17 +15,18 @@ import io.wispforest.owo.ui.core.CursorStyle;
 import io.wispforest.owo.ui.core.HorizontalAlignment;
 import io.wispforest.owo.ui.core.Insets;
 import io.wispforest.owo.ui.core.OwoUIAdapter;
-import io.wispforest.owo.ui.core.Positioning;
 import io.wispforest.owo.ui.core.Sizing;
+import io.wispforest.owo.ui.core.Positioning;
 import io.wispforest.owo.ui.core.Surface;
 import io.wispforest.owo.ui.core.VerticalAlignment;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.toast.SystemToast;
+import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -31,11 +35,45 @@ import java.util.stream.Stream;
 public class GalleryScreen extends BaseOwoScreen<FlowLayout> {
     private Path currentDir;
     private final Path rootDir;
-    private int columns = 3; // Default to 3x3 as requested
+    private final Screen parent;
+    private static int columns = 3; // Default to 3x3 as requested, static for session persistence
+    private int lastMouseX = 0;
+    private int lastMouseY = 0;
 
-    public GalleryScreen(Path rootDir) {
-        this.rootDir = rootDir;
-        this.currentDir = rootDir;
+    public GalleryScreen(Screen parent) {
+        this.parent = parent;
+        this.rootDir = MinecraftClient.getInstance().runDirectory.toPath().resolve("screenshots");
+        this.currentDir = resolveStartPath();
+    }
+
+    @Override
+    public void render(net.minecraft.client.gui.DrawContext context, int mouseX, int mouseY, float delta) {
+        this.lastMouseX = mouseX;
+        this.lastMouseY = mouseY;
+        super.render(context, mouseX, mouseY, delta);
+    }
+
+    public GalleryScreen(Screen parent, Path currentDir) {
+        this.parent = parent;
+        this.rootDir = MinecraftClient.getInstance().runDirectory.toPath().resolve("screenshots");
+        this.currentDir = currentDir != null ? currentDir : resolveStartPath();
+    }
+
+    private Path resolveStartPath() {
+        ModConfig config = ConfigManager.getInstance();
+        File gameDir = MinecraftClient.getInstance().runDirectory;
+        File screenshotsDir = new File(gameDir, "screenshots");
+
+        if (MinecraftClient.getInstance().world == null) {
+            return ScreenshotPathGenerator.getScreenshotDirectory(screenshotsDir, config, null, "", "", null).toPath();
+        }
+
+        String rawWorldId = WorldUtils.getWorldId();
+        String safeWorldId = WorldUtils.sanitize(rawWorldId);
+        String dimension = WorldUtils.getDimension();
+
+        return ScreenshotPathGenerator
+                .getScreenshotDirectory(screenshotsDir, config, rawWorldId, safeWorldId, dimension, null).toPath();
     }
 
     @Override
@@ -43,65 +81,106 @@ public class GalleryScreen extends BaseOwoScreen<FlowLayout> {
         return OwoUIAdapter.create(this, Containers::verticalFlow);
     }
 
-    // Attempting strict case match with prompt's suggestion
-    // If it overrides, good. If not, it's a helper.
     @Override
     protected void build(FlowLayout root) {
         root.surface(Surface.VANILLA_TRANSLUCENT);
         root.horizontalAlignment(HorizontalAlignment.CENTER);
         root.verticalAlignment(VerticalAlignment.CENTER);
 
-        var main = Containers.verticalFlow(Sizing.fill(90), Sizing.fill(90));
+        // Full screen main container to ensure edge alignment works
+        var main = Containers.verticalFlow(Sizing.fill(100), Sizing.fill(100));
+        main.verticalAlignment(VerticalAlignment.TOP);
+        // Add vertical padding to main to avoid hugging screen top/bottom too tightly
+        // if needed
+        // But requested to match SingleView which seems to flush? We'll keep it simple.
 
-        var topBar = Containers.horizontalFlow(Sizing.fill(100), Sizing.fixed(40));
+        // Top Bar
+        var topBar = Containers.horizontalFlow(Sizing.fill(100), Sizing.fixed(30));
         topBar.verticalAlignment(VerticalAlignment.CENTER);
+        topBar.margins(Insets.top(5).withBottom(5)); // Small top margin
+        topBar.padding(Insets.horizontal(20)); // Match SingleImageScreen padding
 
-        topBar.child(Components.button(Text.literal("↑"), b -> {
-            if (!currentDir.equals(rootDir)) {
-                currentDir = currentDir.getParent();
+        // Left Group (Up + Label) - Pinned Left
+        var topLeft = Containers.horizontalFlow(Sizing.content(), Sizing.content());
+        topLeft.verticalAlignment(VerticalAlignment.CENTER);
+        topLeft.child(Components.button(Text.literal("↑"), b -> {
+            Path parentPath = currentDir.getParent();
+            if (parentPath != null && (parentPath.startsWith(rootDir) || parentPath.equals(rootDir))) {
+                currentDir = parentPath;
                 refresh(root);
             }
         }).id("up-button").sizing(Sizing.fixed(20)));
 
-        topBar.child(Components.label(Text.literal("screenshots/"))
+        topLeft.child(Components.label(Text.literal("screenshots/"))
                 .id("path-label")
                 .margins(Insets.left(10)));
 
-        // Spacer
-        topBar.child(Containers.horizontalFlow(Sizing.fill(50), Sizing.fixed(1)));
+        // Use relative positioning to pin left
+        topLeft.positioning(Positioning.relative(0, 50));
+        topBar.child(topLeft);
 
-        // Grid Size Toggle
-        topBar.child(Components.button(Text.literal(" " + columns + " Columns "), b -> {
+        // Right Group (Columns) - Pinned Right
+        var topRight = Components.button(Text.literal(" " + columns + " Columns "), b -> {
             cycleGridSize(b);
             refresh(root);
-        }).id("grid-toggle").margins(Insets.right(10)));
+        }).id("grid-toggle");
+        topRight.margins(Insets.right(0));
+
+        // Use relative positioning to pin right
+        topRight.positioning(Positioning.relative(100, 20));
+        topBar.child(topRight);
 
         main.child(topBar);
 
+        // Content Container (Grid)
+        // Reduce height to safe value to prevent bottom bar overflow (e.g., 80%)
+        // With main=100%, top=30px, bottom=30px. 80% leaves 20% (~something px).
         var contentContainer = Containers.verticalFlow(Sizing.fill(100), Sizing.fill(80));
         contentContainer.id("content-container");
+        // Add margin if grid feels too wide (optional, but consistent with old 90%
+        // main)
+        contentContainer.margins(Insets.horizontal(5));
         main.child(contentContainer);
 
-        main.child(Components.button(Text.literal("Close"), b -> this.close())
-                .id("close-button")
-                .sizing(Sizing.fixed(100), Sizing.fixed(20))
-                .margins(Insets.top(10)));
+        // Bottom Bar
+        var bottomBar = Containers.horizontalFlow(Sizing.fill(100), Sizing.fixed(30)); // Fixed height for consistency
+        bottomBar.verticalAlignment(VerticalAlignment.CENTER);
+        bottomBar.margins(Insets.top(10));
+        bottomBar.padding(Insets.horizontal(20)); // Match SingleImageScreen padding
+
+        // Back Button (Left) - Pinned Left
+        var backBtn = Components.button(Text.literal("Back"), b -> {
+            this.close();
+        }).sizing(Sizing.fixed(90), Sizing.fixed(20));
+        backBtn.positioning(Positioning.relative(0, 50));
+        bottomBar.child(backBtn);
+
+        // Open Folder Button (Right) - Pinned Right
+        var openFolderBtn = Components.button(Text.literal("Open Folder"), b -> {
+            Util.getOperatingSystem().open(currentDir.toFile());
+        }).sizing(Sizing.fixed(90), Sizing.fixed(20));
+        openFolderBtn.positioning(Positioning.relative(100, 20));
+        bottomBar.child(openFolderBtn);
+
+        main.child(bottomBar);
 
         root.child(main);
 
         refresh(root);
     }
 
-    // Cycle: 1 -> 3 -> 6 -> 8 -> 1
+    // ... (cycleGridSize and refresh methods remain unchanged, assuming update
+    // handles block correctly)
+
+    // ...
+
     private void cycleGridSize(io.wispforest.owo.ui.component.ButtonComponent button) {
-        if (columns == 1)
-            columns = 3;
-        else if (columns == 3)
+        if (columns == 3)
             columns = 6;
         else if (columns == 6)
             columns = 8;
         else
-            columns = 1;
+            columns = 3;
 
         button.setMessage(Text.literal(" " + columns + " Columns "));
     }
@@ -113,182 +192,235 @@ public class GalleryScreen extends BaseOwoScreen<FlowLayout> {
         if (pathLabel == null || contentContainer == null)
             return;
 
-        pathLabel.text(Text.literal("Folder: " + rootDir.relativize(currentDir)));
+        if (!Files.exists(currentDir)) {
+            try {
+                Files.createDirectories(currentDir);
+            } catch (IOException e) {
+                currentDir = rootDir;
+            }
+        }
+
+        String displayPath;
+        try {
+            displayPath = rootDir.relativize(currentDir).toString();
+            if (displayPath.isEmpty())
+                displayPath = ".";
+        } catch (IllegalArgumentException e) {
+            displayPath = currentDir.toString();
+        }
+
+        pathLabel.text(Text.literal("Folder: " + displayPath));
         contentContainer.clearChildren();
+        contentContainer.child(Components.label(Text.literal("Loading...")));
 
-        try (Stream<Path> stream = Files.list(currentDir)) {
-            var allFiles = stream.toList();
-            var dirs = new java.util.ArrayList<Path>();
-            var images = new java.util.ArrayList<Path>();
+        java.util.concurrent.CompletableFuture.supplyAsync(() -> {
+            try (Stream<Path> stream = Files.list(currentDir)) {
+                var allFiles = stream.toList();
+                var dirs = new java.util.ArrayList<Path>();
+                var images = new java.util.ArrayList<Path>();
 
-            for (Path p : allFiles) {
-                if (Files.isDirectory(p))
-                    dirs.add(p);
-                else if (p.toString().toLowerCase().endsWith(".png"))
-                    images.add(p);
+                for (Path p : allFiles) {
+                    if (Files.isDirectory(p))
+                        dirs.add(p);
+                    else if (p.toString().toLowerCase().endsWith(".png"))
+                        images.add(p);
+                }
+
+                dirs.sort((p1, p2) -> p1.getFileName().toString().compareToIgnoreCase(p2.getFileName().toString()));
+                images.sort((p1, p2) -> {
+                    try {
+                        return Files.getLastModifiedTime(p2).compareTo(Files.getLastModifiedTime(p1));
+                    } catch (IOException e) {
+                        return 0;
+                    }
+                });
+
+                return new Pair<>(dirs, images);
+            } catch (IOException e) {
+                e.printStackTrace();
+                return null;
+            }
+        }).thenAcceptAsync(result -> {
+            if (result == null) {
+                contentContainer.child(Components.label(Text.literal("Error loading files")));
+                return;
             }
 
-            // Container for scrolling content
+            var dirs = result.left();
+            var images = result.right();
+
+            contentContainer.clearChildren();
+
             var scrollContent = Containers.verticalFlow(Sizing.fill(100), Sizing.content());
-            scrollContent.gap(10);
+            scrollContent.gap(0); // Gap handled by margins of children now
+            scrollContent.padding(Insets.of(3)); // Outer padding
 
-            // 1. Folders Section
+            // Grid Layout Constants
+            int spacing = 6;
+            int halfSpacing = spacing / 2;
+            int scrollBarReserve = 20; // Safe space for scrollbar
+            // Available width is screen width minus margins/scrollbar
+            // Using this.width because main container fills screen
+            int availableWidth = this.width - scrollBarReserve - 10;
+
+            // Width available for ACTUAL CELLS (excluding gaps)
+            // Total Spacing = columns * spacing (since we use half-spacing on all sides of
+            // every cell)
+            int widthForCells = availableWidth - (columns * spacing);
+            int cellWidth = widthForCells / columns;
+
+            // Limit minimum size
+            if (cellWidth < 50)
+                cellWidth = 50;
+
             if (!dirs.isEmpty()) {
-                var folderFlow = Containers.horizontalFlow(Sizing.fill(100), Sizing.content());
-                folderFlow.gap(5);
-                folderFlow.margins(Insets.of(5));
-                // Allow wrapping? horizontalFlow wraps if using specific settings or we use
-                // flexible?
-                // Owo-ui flow layouts don't wrap items automatically to next line unless
-                // configured?
-                // Actually they just overflow. We might need a flexible grid or wrap layout.
-                // FlowLayout does NOT wrap by default.
-                // Let's use a "grid" for folders too, or just a flowing set of buttons?
-                // If we want wrapping chips, we need a layout that supports it.
-                // Owo doesn't have a "FlowWrap" layout easily accessible?
-                // Let's use a grid for folders, but dense.
-                // Or just a dynamic grid based on width.
-
-                // Let's use a grid for folders, 4 columns?
-                int folderCols = 4;
-                int folderRows = (int) Math.ceil((double) dirs.size() / folderCols);
-                var folderGrid = Containers.grid(Sizing.fill(100), Sizing.content(), folderRows, folderCols);
-
-                // Calculate folder cell width
-                int totalWidth = (int) (this.width * 0.90) - 20;
-                int fGap = 4;
-                int fCellWidth = (totalWidth - (folderCols - 1) * fGap) / folderCols;
+                // Use grid layout matching image columns
+                int rows = (int) Math.ceil((double) dirs.size() / columns);
+                var folderGrid = Containers.grid(Sizing.fill(100), Sizing.content(), rows, columns);
+                folderGrid.horizontalAlignment(HorizontalAlignment.CENTER);
 
                 for (int i = 0; i < dirs.size(); i++) {
-                    folderGrid.child(createFolderUI(dirs.get(i), fCellWidth, 20), i / folderCols, i % folderCols);
+                    var cell = createFolderUI(dirs.get(i), cellWidth);
+                    cell.margins(Insets.of(halfSpacing)); // Even spacing
+                    folderGrid.child(cell, i / columns, i % columns);
                 }
+
+                // Fill remaining slots
+                int filledSlots = dirs.size();
+                int totalSlots = rows * columns;
+                for (int i = filledSlots; i < totalSlots; i++) {
+                    var filler = Containers.verticalFlow(Sizing.fixed(cellWidth), Sizing.fixed(20));
+                    filler.margins(Insets.of(halfSpacing));
+                    folderGrid.child(filler, i / columns, i % columns);
+                }
+
                 scrollContent.child(folderGrid);
             }
 
-            // 2. Images Section
             if (!images.isEmpty()) {
                 int fileCount = images.size();
                 int rows = (int) Math.ceil((double) fileCount / columns);
-                if (rows < 1)
-                    rows = 1;
 
                 var grid = Containers.grid(Sizing.fill(100), Sizing.content(), rows, columns);
                 grid.id("screenshot-grid");
                 grid.horizontalAlignment(HorizontalAlignment.CENTER);
 
-                int totalWidth = (int) (this.width * 0.90) - 20;
-                int gap = 4;
-                int cellWidth = (totalWidth - (columns - 1) * gap) / columns;
                 int cellHeight = (int) (cellWidth * (9.0 / 16.0));
-
-                int thumbWidth = 320;
-                if (columns <= 1)
-                    thumbWidth = 1280;
-                else if (columns <= 3)
-                    thumbWidth = 640;
+                if (cellHeight < 50)
+                    cellHeight = 50;
 
                 for (int i = 0; i < images.size(); i++) {
-                    grid.child(createImageUI(images.get(i), cellWidth, cellHeight, thumbWidth), i / columns,
-                            i % columns);
+                    var cell = createImageUI(images, i, columns, cellWidth, cellHeight);
+                    cell.margins(Insets.of(halfSpacing)); // Even spacing
+                    grid.child(cell, i / columns, i % columns);
                 }
+
+                // Fill remaining slots
+                int filledSlots = images.size();
+                int totalSlots = rows * columns;
+                for (int i = filledSlots; i < totalSlots; i++) {
+                    var filler = Containers.verticalFlow(Sizing.fixed(cellWidth), Sizing.fixed(cellHeight));
+                    filler.margins(Insets.of(halfSpacing));
+                    grid.child(filler, i / columns, i % columns);
+                }
+
                 scrollContent.child(grid);
             }
 
             var scroll = Containers.verticalScroll(Sizing.fill(100), Sizing.fill(100), scrollContent);
-            // scroll.scrollbarThru(true);
             contentContainer.child(scroll);
 
-        } catch (IOException e) {
-            e.printStackTrace();
-            contentContainer.child(Components.label(Text.literal("Error loading files")));
-        }
+        }, MinecraftClient.getInstance()); // Execute on Main Thread
     }
 
-    private Component createFolderUI(Path path, int w, int h) {
+    private Component createFolderUI(Path path, int width) {
         String name = path.getFileName().toString();
-        // Simple truncation
-        if (name.length() > 15) {
-            name = name.substring(0, 12) + "...";
+
+        // Adjust truncation based on column count or width
+        int maxLen = 25;
+        if (columns >= 6)
+            maxLen = 12;
+        if (columns >= 8)
+            maxLen = 8;
+
+        if (name.length() > maxLen) {
+            name = name.substring(0, maxLen - 3) + "...";
         }
 
         return Components.button(Text.literal("📁 " + name), b -> {
             this.currentDir = path;
             refresh((FlowLayout) this.uiAdapter.rootComponent);
-        }).sizing(Sizing.fixed(w), Sizing.fixed(20)) // Folders maybe just strips? Or boxes?
-                .margins(Insets.of(2)) // Small margin for the cell
-                .tooltip(Text.literal(path.getFileName().toString())); // Full name on hover
+        }).sizing(Sizing.fixed(width), Sizing.fixed(20))
+                .margins(Insets.of(2))
+                .tooltip(Text.literal(path.getFileName().toString()));
     }
 
-    private Component createImageUI(Path path, int w, int h, int thumbWidth) {
-        Identifier thumb = ScreenshotTextureManager.getOrCreateThumbnail(path, thumbWidth);
-        int thumbHeight = (int) (thumbWidth * 9.0 / 16.0);
+    private Component createImageUI(java.util.List<Path> images, int index, int currentColumns, int w, int h) {
+        Path path = images.get(index);
 
-        var texture = Components.texture(thumb, 0, 0, thumbWidth, thumbHeight, thumbWidth, thumbHeight);
-        texture.cursorStyle(CursorStyle.HAND);
+        int thumbBase = 320;
+        if (currentColumns <= 3)
+            thumbBase = 480;
+
+        Identifier thumb = ScreenshotTextureManager.getOrCreateThumbnail(path, thumbBase);
+
+        var wrapper = Containers.verticalFlow(Sizing.content(), Sizing.content());
+        wrapper.cursorStyle(CursorStyle.HAND);
+
+        int aspectW = 16;
+        int aspectH = 9;
+        var texture = Components.texture(thumb, 0, 0, aspectW, aspectH, aspectW, aspectH);
         texture.sizing(Sizing.fixed(w), Sizing.fixed(h));
 
-        // NOTE: Diabling this functionality because its not working the way I want.
-        // texture.mouseDown().subscribe((cx, cy, button) -> {
-        // if (button == 1) {
-        // int absX = texture.x() + (int) cx;
-        // int absY = texture.y() + (int) cy;
-        // showContextMenu(path, absX, absY);
-        // return true;
-        // }
-        // return false;
-        // });
-        // Add margins to create the "padding" between grid items
+        // Padding ensures the border is drawn outside the image content
+        wrapper.padding(Insets.of(1));
 
-        return texture.margins(Insets.of(2));
+        wrapper.child(texture);
+
+        // Use dynamic surface for consistent hover effect instead of event listeners
+        wrapper.surface((context, component) -> {
+            // Use captured mouse coordinates from the render pass to ensure
+            // exact synchronization with Owo-UI's internal logic (tooltips, etc.)
+            if (component.isInBoundingBox(this.lastMouseX, this.lastMouseY)) {
+                Surface.outline(0xFFFFFFFF).draw(context, component);
+            }
+        });
+
+        wrapper.mouseDown().subscribe((mx, my, button) -> {
+            if (button == 0) {
+                MinecraftClient.getInstance()
+                        .setScreen(new SingleImageScreen(this.parent, images, index, this.currentDir));
+                return true;
+            }
+            return false;
+        });
+
+        String fileName = path.getFileName().toString();
+        // Date removed as per user request
+
+        wrapper.tooltip(Text.literal(fileName));
+
+        wrapper.margins(Insets.of(2));
+
+        return wrapper;
     }
 
-    private void showContextMenu(Path path, int x, int y) {
-        var overlay = Containers.verticalFlow(Sizing.fill(100), Sizing.fill(100));
-        overlay.id("context-menu-overlay");
-        overlay.horizontalAlignment(HorizontalAlignment.LEFT);
-        overlay.verticalAlignment(VerticalAlignment.TOP);
-        // overlay.z(100);
-        overlay.mouseDown().subscribe((mx, my, button) -> {
-            ((FlowLayout) this.uiAdapter.rootComponent).removeChild(overlay);
-            return true;
-        });
-
-        var menu = Containers.verticalFlow(Sizing.content(), Sizing.content());
-        menu.surface(Surface.flat(0xFF000000).and(Surface.outline(0xFFFFFFFF)));
-        menu.padding(Insets.of(2));
-        menu.positioning(Positioning.absolute(x, y));
-
-        menu.mouseDown().subscribe((mx, my, button) -> true);
-
-        var openBtn = Components.button(Text.literal("Open Image"), b -> {
-            Util.getOperatingSystem().open(path.toUri());
-            ((FlowLayout) this.uiAdapter.rootComponent).removeChild(overlay);
-        });
-        openBtn.sizing(Sizing.fixed(120), Sizing.fixed(20));
-        menu.child(openBtn);
-
-        var copyBtn = Components.button(Text.literal("Copy to Clipboard"), b -> {
-            boolean success = ClipboardUtil.copyImageToClipboard(path);
-            if (success) {
-                SystemToast.add(
-                        MinecraftClient.getInstance().getToastManager(),
-                        SystemToast.Type.PERIODIC_NOTIFICATION,
-                        Text.literal("Copied!"),
-                        Text.literal("Image copied to clipboard"));
-            }
-            ((FlowLayout) this.uiAdapter.rootComponent).removeChild(overlay);
-        });
-        copyBtn.sizing(Sizing.fixed(120), Sizing.fixed(20));
-        menu.child(copyBtn);
-
-        overlay.child(menu);
-
-        ((FlowLayout) this.uiAdapter.rootComponent).child(overlay);
+    @Override
+    public void close() {
+        if (parent != null) {
+            this.client.setScreen(parent);
+        } else {
+            super.close();
+        }
     }
 
     @Override
     public void removed() {
         super.removed();
+        this.uiAdapter = null; // Force rebuild on next init to reload textures
         ScreenshotTextureManager.clearCache();
+    }
+
+    private record Pair<L, R>(L left, R right) {
     }
 }
