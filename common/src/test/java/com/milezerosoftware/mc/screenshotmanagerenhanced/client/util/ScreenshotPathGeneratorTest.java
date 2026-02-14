@@ -191,4 +191,77 @@ public class ScreenshotPathGeneratorTest {
         // Should use default path because custom path doesn't exist
         assertEquals(new File(screenshotsDir, "Test_World_1"), result);
     }
+
+    // --- NONE Mode Tests ---
+
+    @Test
+    public void testNoneMode() {
+        ModConfig config = new ModConfig();
+        config.groupingMode = GroupingMode.NONE;
+
+        File result = ScreenshotPathGenerator.getScreenshotDirectory(screenshotsDir, config, rawWorldId, safeWorldId,
+                dimension, date);
+        assertEquals(screenshotsDir, result);
+    }
+
+    @Test
+    public void testNoneModeWithCustomPath() {
+        File customDir = tempDir.toFile();
+
+        ModConfig config = new ModConfig();
+        config.groupingMode = GroupingMode.NONE;
+        config.customSavePathEnabled = true;
+        config.customPathConfig = new CustomPathConfig(true, customDir.getAbsolutePath());
+
+        File result = ScreenshotPathGenerator.getScreenshotDirectory(screenshotsDir, config, rawWorldId, safeWorldId,
+                dimension, date);
+        // NONE with custom path should return the custom dir with no subfolders
+        assertEquals(customDir, result);
+    }
+
+    // --- Null Date Tests (Gallery Browsing) ---
+
+    @Test
+    public void testDateModeWithNullDate() {
+        ModConfig config = new ModConfig();
+        config.groupingMode = GroupingMode.DATE;
+
+        File result = ScreenshotPathGenerator.getScreenshotDirectory(screenshotsDir, config, rawWorldId, safeWorldId,
+                dimension, null);
+        // With null date, DATE mode should return the base screenshots dir
+        assertEquals(screenshotsDir, result);
+    }
+
+    @Test
+    public void testWorldDateWithNullDate() {
+        ModConfig config = new ModConfig();
+        config.groupingMode = GroupingMode.WORLD_DATE;
+
+        File result = ScreenshotPathGenerator.getScreenshotDirectory(screenshotsDir, config, rawWorldId, safeWorldId,
+                dimension, null);
+        // With null date, should fall back to world dir only
+        assertEquals(new File(screenshotsDir, "Test_World_1"), result);
+    }
+
+    @Test
+    public void testWorldDimensionDateWithNullDate() {
+        ModConfig config = new ModConfig();
+        config.groupingMode = GroupingMode.WORLD_DIMENSION_DATE;
+
+        File result = ScreenshotPathGenerator.getScreenshotDirectory(screenshotsDir, config, rawWorldId, safeWorldId,
+                dimension, null);
+        // With null date, should fall back to world/dimension
+        assertEquals(new File(new File(screenshotsDir, "Test_World_1"), "minecraft_the_nether"), result);
+    }
+
+    @Test
+    public void testWorldDateDimensionWithNullDate() {
+        ModConfig config = new ModConfig();
+        config.groupingMode = GroupingMode.WORLD_DATE_DIMENSION;
+
+        File result = ScreenshotPathGenerator.getScreenshotDirectory(screenshotsDir, config, rawWorldId, safeWorldId,
+                dimension, null);
+        // With null date, should fall back to world dir only (date level is skipped)
+        assertEquals(new File(screenshotsDir, "Test_World_1"), result);
+    }
 }
