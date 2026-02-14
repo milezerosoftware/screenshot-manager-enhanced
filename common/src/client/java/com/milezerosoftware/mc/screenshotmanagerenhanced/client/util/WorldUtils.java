@@ -6,7 +6,6 @@ import net.minecraft.server.integrated.IntegratedServer;
 import net.minecraft.util.WorldSavePath;
 import org.jetbrains.annotations.NotNull;
 
-import java.io.File;
 import java.net.InetSocketAddress;
 
 public class WorldUtils {

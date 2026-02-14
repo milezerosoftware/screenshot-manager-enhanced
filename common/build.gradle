@@ -8,6 +8,7 @@ repositories {
     mavenCentral()
     maven { url = "https://maven.shedaniel.me/" }
     maven { url = "https://maven.terraformersmc.com/" }
+    maven { url = "https://maven.wispforest.io/releases/" }
 }
 
 dependencies {
@@ -19,6 +20,10 @@ dependencies {
     // Common mod dependencies
     modImplementation "me.shedaniel.cloth:cloth-config-fabric:${project.cloth_config_version}"
     modImplementation "com.terraformersmc:modmenu:${project.modmenu_version}"
+    
+    // owo-lib
+    modImplementation "io.wispforest:owo-lib:${project.owo_version}"
+    include "io.wispforest:owo-lib:${project.owo_version}"
 
     // Testing
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'

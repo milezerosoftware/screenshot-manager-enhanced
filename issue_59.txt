@@ -1,0 +1,272 @@
+## 🎯 Objective
+
+To view images in game without having to leave to open up a folder. 
+
+---
+
+## 📝 Background
+
+**Problem:**
+No other gallery mod has folder support, and there's only 2, that don't really have a way of contacting the developer for support with their mod. 
+
+**Proposed Solution:**
+Add a gallery button in the pause menu and title menu. That would open a page where you can view the screenshots not already categorized in folders, and for the ones that are in folders, add the buttons to get there as well. Not so sure on how that should look. 
+
+---
+
+# Implementation Plan: Dynamic Screenshot Gallery with Directory Navigation
+
+## **Overview**
+
+Implement a robust, in-game screenshot browser for the "Screenshot Manager Enhanced" mod. The gallery will support dynamic image loading, directory traversal (folders), and high-performance thumbnail rendering using `owo-lib`.
+
+---
+
+## **1. Project Dependencies**
+
+Ensure the following are present in `build.gradle`:
+
+* **owo-lib**: For the UI framework.
+* **Fabric API**: For core hooks.
+
+---
+
+## **2. UI Layout (owo-ui XML)**
+
+**File Path:** `src/main/resources/assets/screenshot_manager/owo_ui/gallery.xml`
+
+```xml
+<owo-ui xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/wisp-forest/owo-lib/1.21/owo-ui.xsd">
+    <components>
+        <surface>
+            <panel layout-universal="100%" horizontal-alignment="center" vertical-alignment="center">
+                <children>
+                    <flow-layout direction="vertical" layout-universal="90%">
+                        <children>
+                            <flow-layout direction="horizontal" layout-universal="100%, 40px" vertical-alignment="center">
+                                <children>
+                                    <button id="up-button" layout-universal="20px, 20px">
+                                        <text>↑</text>
+                                    </button>
+                                    <label id="path-label">
+                                        <text>screenshots/</text>
+                                        <margins left="10"/>
+                                        <color>#CCCCCC</color>
+                                    </label>
+                                </children>
+                            </flow-layout>
+
+                            <scroll-container layout-universal="100%, 80%" scrollbar-thru-alignment="right">
+                                <grid-layout id="screenshot-grid" layout-universal="100%, 0" columns="4" horizontal-alignment="center">
+                                    </grid-layout>
+                            </scroll-container>
+
+                            <button id="close-button" layout-universal="100px, 20px">
+                                <text>Close</text>
+                                <margins top="10"/>
+                                <horizontal-alignment>center</horizontal-alignment>
+                            </button>
+                        </children>
+                    </flow-layout>
+                </children>
+                <surface><vanilla-translucent/></surface>
+            </panel>
+        </surface>
+    </components>
+</owo-ui>
+```
+
+---
+
+## **3. Implementation Logic (Java)**
+
+### **A. Texture Management & Performance**
+
+To avoid **OutOfMemory (OOM)** errors, all screenshots must be downscaled before being uploaded to the GPU.
+
+```java
+public class ScreenshotTextureManager {
+    private static final Map<Path, Identifier> CACHE = new HashMap<>();
+
+    public static Identifier getOrCreateThumbnail(Path path) {
+        if (CACHE.containsKey(path)) return CACHE.get(path);
+
+        try (InputStream is = Files.newInputStream(path)) {
+            NativeImage fullImg = NativeImage.read(is);
+            // Downscale to 320x180 (16:9)
+            NativeImage thumb = new NativeImage(320, 180, true);
+            fullImg.resizeSubRectTo(0, 0, fullImg.getWidth(), fullImg.getHeight(), thumb);
+            
+            Identifier id = Identifier.of("screenshot_manager", "thumb/" + path.getFileName().toString().toLowerCase());
+            MinecraftClient.getInstance().getTextureManager().registerTexture(id, new DynamicTexture(thumb));
+            
+            CACHE.put(path, id);
+            fullImg.close();
+            return id;
+        } catch (Exception e) {
+            return Identifier.of("minecraft", "textures/item/barrier.png");
+        }
+    }
+
+    public static void clearCache() {
+        CACHE.values().forEach(id -> MinecraftClient.getInstance().getTextureManager().destroyTexture(id));
+        CACHE.clear();
+    }
+}
+```
+
+### **B. The Screen Class**
+
+This class handles the logic for switching directories and refreshing the UI components.
+
+```java
+public class GalleryScreen extends BaseOwoScreen<FlowLayout> {
+    private Path currentDir;
+    private final Path rootDir;
+
+    public GalleryScreen(Path rootDir) {
+        this.rootDir = rootDir;
+        this.currentDir = rootDir;
+    }
+
+    @Override
+    protected @NotNull java.lang.reflect.Type getRootComponentType() { return FlowLayout.class; }
+
+    @Override
+    protected @NotNull Identifier getXMLId() { return Identifier.of("screenshot_manager", "gallery"); }
+
+    @Override
+    protected void build(FlowLayout root) {
+        refresh(root);
+        
+        root.childById(ButtonComponent.class, "close-button").onPress(b -> this.close());
+        root.childById(ButtonComponent.class, "up-button").onPress(b -> {
+            if (!currentDir.equals(rootDir)) {
+                currentDir = currentDir.getParent();
+                refresh(root);
+            }
+        });
+    }
+
+    private void refresh(FlowLayout root) {
+        var grid = root.childById(GridLayout.class, "screenshot-grid");
+        var pathLabel = root.childById(LabelComponent.class, "path-label");
+        grid.clearChildren();
+        pathLabel.text(Text.literal("Folder: " + rootDir.relativize(currentDir)));
+
+        try (var stream = Files.list(currentDir)) {
+            stream.forEach(path -> {
+                if (Files.isDirectory(path)) {
+                    grid.child(createFolderUI(path), grid.children().size() / 4, grid.children().size() % 4);
+                } else if (path.toString().endsWith(".png")) {
+                    grid.child(createImageUI(path), grid.children().size() / 4, grid.children().size() % 4);
+                }
+            });
+        } catch (IOException e) { e.printStackTrace(); }
+    }
+
+    private Component createFolderUI(Path path) {
+        return Components.button(Text.literal("📁 " + path.getFileName()), b -> {
+            this.currentDir = path;
+            refresh((FlowLayout) this.uiAdapter.rootComponent);
+        }).margins(Insets.of(5));
+    }
+
+    private Component createImageUI(Path path) {
+        Identifier thumb = ScreenshotTextureManager.getOrCreateThumbnail(path);
+        return Components.texture(thumb, 0, 0, 320, 180, 320, 180)
+            .cursorStyle(CursorStyle.HAND)
+            .onMouseDown((cx, cy, button) -> {
+                Util.getOperatingSystem().open(path.toFile());
+                return true;
+            }).margins(Insets.of(5));
+    }
+
+    @Override
+    public void removed() {
+        super.removed();
+        ScreenshotTextureManager.clearCache();
+    }
+}
+```
+
+---
+
+## **4. Integration (Mixin)**
+
+**File Path:** `src/main/java/com/example/mixin/GameMenuScreenMixin.java`
+
+```java
+@Mixin(GameMenuScreen.class)
+public class GameMenuScreenMixin extends Screen {
+    protected GameMenuScreenMixin(Text title) { super(title); }
+
+    @Inject(at = @At("TAIL"), method = "initWidgets")
+    private void addGalleryButton(CallbackInfo ci) {
+        this.addDrawableChild(ButtonWidget.builder(Text.literal("Screenshots"), button -> {
+            Path path = MinecraftClient.getInstance().runDirectory.toPath().resolve("screenshots");
+            MinecraftClient.getInstance().setScreen(new GalleryScreen(path));
+        }).dimensions(this.width / 2 + 104, this.height / 4 + 96 + -16, 20, 20).build());
+    }
+}
+
+```
+
+---
+
+## **5. Final Instructions**
+
+1. **Optimization**: Ensure `NativeImage` objects are closed immediately after the `DynamicTexture` is created to prevent memory leaks.
+2. **Asset Check**: If `back_button.png` is not found, default the "Up" button to a standard vanilla button labeled ".." or "UP".
+3. **Thread Safety**: File I/O should ideally be handled on a separate thread if the screenshot folder contains hundreds of files, though `owo-ui` is efficient enough for moderate folder sizes.
+
+---
+
+## ✅ Definition of Done
+
+(What must be completed for this feature to be considered "shipped"?)
+
+- [ ] All user stories are implemented and meet acceptance criteria.
+- [ ] Designs are implemented to spec.
+- [ ] All new code is covered by tests.
+- [ ] All existing tests pass.
+- [ ] The feature is documented (if applicable).
+- [ ] The code is reviewed by at least one other developer.
+
+---
+
+## 🧪 Testing Plan
+
+(Describe the testing strategy for this feature.)
+
+- **Unit Tests:**
+- **Integration Tests:**
+- **End-to-End (E2E) Tests:**
+- **Manual Testing:**
+
+---
+
+## ⚠️ Risks & Mitigation
+
+(List any potential risks, dependencies, or open questions.)
+
+- **Risk:**
+- **Mitigation:**
+
+---
+
+## 🖼️ Assets & Artifacts
+
+(List any design files, documentation, or other assets related to this feature.)
+
+- [Link to Figma Mockups]()
+- [Link to Technical Spec]()
+
+---
+
+## 🚫 Out of Scope
+
+(What is explicitly not being addressed in this feature? This helps to manage scope and expectations.)
+
+-
