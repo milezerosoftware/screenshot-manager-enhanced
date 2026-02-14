@@ -19,7 +19,8 @@ public class ScreenshotPathGenerator {
      * @param rawWorldId     The raw world ID (for config lookup).
      * @param safeWorldId    The sanitized world ID (for directory creation).
      * @param dimension      The dimension name.
-     * @param date           The date of the screenshot.
+     * @param date           The date of the screenshot. Can be null for Gallery
+     *                       browsing.
      * @return The target directory for the screenshot.
      */
     public static File getScreenshotDirectory(File screenshotsDir, ModConfig config,
@@ -50,21 +51,33 @@ public class ScreenshotPathGenerator {
             }
         }
 
-        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
-        String dateStr = dateFormat.format(date);
+        String dateStr = null;
+        if (date != null) {
+            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+            dateStr = dateFormat.format(date);
+        }
 
         // Sanitize dimension if needed, usually passed as "minecraft:overworld"
         String safeDimension = dimension.replace(":", "_");
 
         return switch (mode) {
-            case DATE -> new File(screenshotsDir, dateStr);
+            case DATE -> (dateStr != null) ? new File(screenshotsDir, dateStr) : screenshotsDir;
             case WORLD -> new File(screenshotsDir, safeWorldId);
             case WORLD_DIMENSION -> new File(new File(screenshotsDir, safeWorldId), safeDimension);
-            case WORLD_DATE -> new File(new File(screenshotsDir, safeWorldId), dateStr);
-            case WORLD_DIMENSION_DATE ->
-                new File(new File(new File(screenshotsDir, safeWorldId), safeDimension), dateStr);
-            case WORLD_DATE_DIMENSION ->
-                new File(new File(new File(screenshotsDir, safeWorldId), dateStr), safeDimension);
+            case WORLD_DATE -> (dateStr != null)
+                    ? new File(new File(screenshotsDir, safeWorldId), dateStr)
+                    : new File(screenshotsDir, safeWorldId);
+            case WORLD_DIMENSION_DATE -> {
+                File dimDir = new File(new File(screenshotsDir, safeWorldId), safeDimension);
+                yield (dateStr != null) ? new File(dimDir, dateStr) : dimDir;
+            }
+            case WORLD_DATE_DIMENSION -> {
+                // Hierarchy: World -> Date -> Dimension
+                // If date is null, we return World (so user sees date folders)
+                yield (dateStr != null)
+                        ? new File(new File(new File(screenshotsDir, safeWorldId), dateStr), safeDimension)
+                        : new File(screenshotsDir, safeWorldId);
+            }
             case NONE -> screenshotsDir;
         };
     }

@@ -1,12 +1,12 @@
 package com.milezerosoftware.mc.screenshotmanagerenhanced.client.util;
 
+import com.milezerosoftware.mc.screenshotmanagerenhanced.util.StringSanitizer;
 import net.minecraft.client.MinecraftClient;
 
 import net.minecraft.server.integrated.IntegratedServer;
 import net.minecraft.util.WorldSavePath;
 import org.jetbrains.annotations.NotNull;
 
-import java.io.File;
 import java.net.InetSocketAddress;
 
 public class WorldUtils {
@@ -89,11 +89,7 @@ public class WorldUtils {
      */
     @NotNull
     public static String sanitize(String input) {
-        // Sanitize by replacing any character that isn't alphanumeric, a dot, a hyphen,
-        // or parentheses with an underscore.
-        // This ensures compatibility with strict file system naming rules (e.g.,
-        // Windows forbids < > : " / \ | ? *).
-        return input.replaceAll("[^a-zA-Z0-9\\.\\-\\(\\)]", "_");
+        return StringSanitizer.sanitizeForFilesystem(input);
     }
 
     /**

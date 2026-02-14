@@ -64,6 +64,7 @@ public class ModMenuIntegration implements ModMenuApi {
                 };
         }
 
+        @SuppressWarnings("unchecked")
         private Screen createConfigScreen(Screen parent, ModConfig currentConfig) {
                 // Get default screenshots path for initial population
                 Path defaultScreenshotsPath = FabricLoader.getInstance().getGameDir().resolve("screenshots");
@@ -142,101 +143,173 @@ public class ModMenuIntegration implements ModMenuApi {
                 generalCategory.addEntry(entryBuilder.startTextDescription(Text.literal(" ")).build());
 
                 // --- Advanced Features ---
+                // Construct list explicitly to avoid generic type inference issues with
+                // List.of()
+                List<me.shedaniel.clothconfig2.api.AbstractConfigListEntry> advancedEntries = new java.util.ArrayList<>();
+
+                // Metadata Header
+                advancedEntries.add(entryBuilder.startTextDescription(
+                                Text.literal("Enable the following to add §lMinecraft metadata§r to screenshots."))
+                                .build());
+
+                // Metadata Toggle
+                advancedEntries.add(entryBuilder.startBooleanToggle(
+                                Text.literal("§6Toggle Metadata§r"),
+                                currentConfig.embedMetadata)
+                                .setDefaultValue(false)
+                                .setTooltip(Text.literal(
+                                                "Enable to embed metadata (World, Coords, etc.) into PNG files"))
+                                .setSaveConsumer(
+                                                newValue -> currentConfig.embedMetadata = newValue)
+                                .setYesNoTextSupplier(bool -> Text
+                                                .literal(bool ? "§aYes§r" : "§cNo§r"))
+                                .build());
+
+                advancedEntries.add(entryBuilder.startTextDescription(Text.literal(" ")).build());
+
+                // Custom Path Header
+                advancedEntries.add(entryBuilder.startTextDescription(
+                                Text.literal("Enable the following to set a §lCustom Screenshot§r save location."))
+                                .setTooltip(Text.literal(
+                                                "Save screenshots to a custom directory instead of the default location."))
+                                .build());
+
+                // Enable Custom Path
+                advancedEntries.add(entryBuilder.startBooleanToggle(
+                                Text.literal("§6Enable Custom Location§r"),
+                                currentConfig.customSavePathEnabled)
+                                .setDefaultValue(false)
+                                .setTooltip(Text.literal(
+                                                "Enabling requires Warning Acknowledgment."))
+                                .setSaveConsumer(newValue -> {
+                                        // Just update value, logic is in SavingRunnable
+                                        currentConfig.customSavePathEnabled = newValue;
+
+                                        // Populate default if empty
+                                        if (newValue && currentConfig.customPathConfig.customPath
+                                                        .isEmpty()) {
+                                                currentConfig.customPathConfig.customPath = defaultScreenshotsPath
+                                                                .toAbsolutePath()
+                                                                .toString();
+                                        }
+                                })
+                                .setYesNoTextSupplier(bool -> Text
+                                                .literal(bool ? "§aYes§r" : "§cNo§r"))
+                                .build());
+
+                // Status Entry (Read-Only Text)
+                DynamicTextEntry statusEntry = new DynamicTextEntry();
+
+                // Custom Path Field
+                advancedEntries.add(entryBuilder.startStrField(
+                                Text.literal("§6Screenshot Save Location§r"),
+                                currentConfig.customPathConfig.customPath.isEmpty()
+                                                ? defaultScreenshotsPath.toAbsolutePath()
+                                                                .toString()
+                                                : currentConfig.customPathConfig.customPath)
+                                .setDefaultValue(defaultScreenshotsPath.toAbsolutePath()
+                                                .toString())
+                                .setTooltip(Text.literal(
+                                                "Copy & Paste absolute path in to field\nPath must be absolute when setting a custom location.\n\nCurrent Path: "
+                                                                + (currentConfig.customPathConfig.customPath
+                                                                                .isEmpty()
+                                                                                                ? defaultScreenshotsPath
+                                                                                                                .toAbsolutePath()
+                                                                                                                .toString()
+                                                                                                : currentConfig.customPathConfig.customPath)))
+                                .setErrorSupplier(newValue -> {
+                                        FilePickerHelper.ValidationResult result = FilePickerHelper
+                                                        .validateDirectory(newValue);
+
+                                        // Update dynamic status text
+                                        if (!result.isValid) {
+                                                statusEntry.setText(Text.literal("§c" + result.errorMessage + "§r"));
+                                                // Return error to block saving (this re-enables the overlay, which is
+                                                // necessary for safety)
+                                                String errorString = "CustomPath Error";
+                                                return java.util.Optional.of(Text.literal(errorString));
+                                        } else {
+                                                statusEntry.setText(Text.empty());
+                                                return java.util.Optional.empty();
+                                        }
+                                })
+                                .setSaveConsumer(newValue -> {
+                                        FilePickerHelper.ValidationResult result = FilePickerHelper
+                                                        .validateDirectory(newValue);
+                                        if (result.isValid) {
+                                                currentConfig.customPathConfig.customPath = newValue;
+                                        }
+                                })
+                                .build());
+
+                // Add Status Entry
+                advancedEntries.add(statusEntry);
+
                 generalCategory.addEntry(entryBuilder.startSubCategory(
                                 Text.literal("§3Advanced Features§r"),
-                                List.of(
-                                                // Metadata Header
-                                                entryBuilder.startTextDescription(
-                                                                Text.literal("Enable the following to add §lMinecraft metadata§r to screenshots."))
-                                                                .build(),
-
-                                                // Metadata Toggle
-                                                entryBuilder.startBooleanToggle(
-                                                                Text.literal("§6Toggle Metadata§r"),
-                                                                currentConfig.embedMetadata)
-                                                                .setDefaultValue(false)
-                                                                .setTooltip(Text.literal(
-                                                                                "Enable to embed metadata (World, Coords, etc.) into PNG files"))
-                                                                .setSaveConsumer(
-                                                                                newValue -> currentConfig.embedMetadata = newValue)
-                                                                .setYesNoTextSupplier(bool -> Text
-                                                                                .literal(bool ? "§aYes§r" : "§cNo§r"))
-                                                                .build(),
-
-                                                entryBuilder.startTextDescription(Text.literal(" ")).build(),
-
-                                                // Custom Path Header
-                                                entryBuilder.startTextDescription(
-                                                                Text.literal("Enable the following to set a §lCustom Screenshot§r save location."))
-                                                                .setTooltip(Text.literal(
-                                                                                "Save screenshots to a custom directory instead of the default location."))
-                                                                .build(),
-
-                                                // Enable Custom Path
-                                                entryBuilder.startBooleanToggle(
-                                                                Text.literal("§6Enable Custom Location§r"),
-                                                                currentConfig.customSavePathEnabled)
-                                                                .setDefaultValue(false)
-                                                                .setTooltip(Text.literal(
-                                                                                "Enabling requires Warning Acknowledgment."))
-                                                                .setSaveConsumer(newValue -> {
-                                                                        // Just update value, logic is in SavingRunnable
-                                                                        currentConfig.customSavePathEnabled = newValue;
-
-                                                                        // Populate default if empty
-                                                                        if (newValue && currentConfig.customPathConfig.customPath
-                                                                                        .isEmpty()) {
-                                                                                currentConfig.customPathConfig.customPath = defaultScreenshotsPath
-                                                                                                .toAbsolutePath()
-                                                                                                .toString();
-                                                                        }
-                                                                })
-                                                                .setYesNoTextSupplier(bool -> Text
-                                                                                .literal(bool ? "§aYes§r" : "§cNo§r"))
-                                                                .build(),
-
-                                                // Custom Path Field
-                                                entryBuilder.startStrField(
-                                                                Text.literal("§6Screenshot Save Location§r"),
-                                                                currentConfig.customPathConfig.customPath.isEmpty()
-                                                                                ? defaultScreenshotsPath
-                                                                                                .toAbsolutePath()
-                                                                                                .toString()
-                                                                                : currentConfig.customPathConfig.customPath)
-                                                                .setDefaultValue(defaultScreenshotsPath.toAbsolutePath()
-                                                                                .toString())
-                                                                .setTooltip(Text.literal(
-                                                                                "Copy & Paste absolute path in to field\nPath must be absolute when setting a custom location.\n\nCurrent Path: "
-                                                                                                +
-                                                                                                (currentConfig.customPathConfig.customPath
-                                                                                                                .isEmpty()
-                                                                                                                                ? defaultScreenshotsPath
-                                                                                                                                                .toAbsolutePath()
-                                                                                                                                                .toString()
-                                                                                                                                : currentConfig.customPathConfig.customPath)))
-                                                                .setErrorSupplier(newValue -> {
-                                                                        FilePickerHelper.ValidationResult result = FilePickerHelper
-                                                                                        .validateDirectory(newValue);
-                                                                        if (!result.isValid) {
-                                                                                return java.util.Optional
-                                                                                                .of(Text.literal(
-                                                                                                                result.errorMessage));
-                                                                        }
-                                                                        return java.util.Optional.empty();
-                                                                })
-                                                                .setSaveConsumer(newValue -> {
-                                                                        FilePickerHelper.ValidationResult result = FilePickerHelper
-                                                                                        .validateDirectory(newValue);
-                                                                        if (result.isValid) {
-                                                                                currentConfig.customPathConfig.customPath = newValue;
-                                                                        }
-                                                                })
-                                                                .build()))
+                                advancedEntries)
                                 .setExpanded(currentConfig.advancedSettings)
                                 .setTooltip(Text.literal("Click to view Advanced Features"))
                                 .build());
 
                 return builder.build();
+        }
+
+        // Custom Entry for dynamic text rendering
+        private static class DynamicTextEntry extends me.shedaniel.clothconfig2.api.AbstractConfigListEntry<Object> {
+                private Text text = Text.empty();
+
+                public DynamicTextEntry() {
+                        super(Text.empty(), false);
+                }
+
+                public void setText(Text text) {
+                        this.text = text;
+                }
+
+                @Override
+                public void render(net.minecraft.client.gui.DrawContext context, int index, int y, int x,
+                                int entryWidth,
+                                int entryHeight, int mouseX, int mouseY, boolean hovered, float tickDelta) {
+                        if (!text.equals(Text.empty())) {
+                                context.drawText(MinecraftClient.getInstance().textRenderer, text, x + 10, y + 6,
+                                                0xFFFFFF, false);
+                        }
+                }
+
+                @Override
+                public List<? extends net.minecraft.client.gui.Element> children() {
+                        return Collections.emptyList();
+                }
+
+                @Override
+                public Object getValue() {
+                        return null;
+                }
+
+                @Override
+                public java.util.Optional<Object> getDefaultValue() {
+                        return java.util.Optional.empty();
+                }
+
+                @Override
+                public void save() {
+                }
+
+                @Override
+                public void setRequiresRestart(boolean requiresRestart) {
+                }
+
+                @SuppressWarnings("unchecked")
+                @Override
+                public List<? extends net.minecraft.client.gui.Selectable> narratables() {
+                        return (List) Collections.emptyList();
+                }
+
+                @Override
+                public Text getFieldName() {
+                        return Text.empty();
+                }
         }
 
         private void showCustomPathWarningDialog(ModConfig config, Screen parent) {

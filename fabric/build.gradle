@@ -13,6 +13,8 @@ base {
 repositories {
     maven { url = "https://maven.shedaniel.me/" }
     maven { url = "https://maven.terraformersmc.com/" }
+    maven { url = "https://maven.wispforest.io/releases/" }
+    maven { url = "https://jitpack.io" } // needed for 26.1
 }
 
 dependencies {
@@ -28,18 +30,36 @@ dependencies {
     // ModMenu
     modImplementation("com.terraformersmc:modmenu:${project.modmenu_version}")
     
+    // owo-lib
+    modImplementation("io.wispforest:owo-lib:${project.owo_version}") {
+        include "io.wispforest:owo-lib:${project.owo_version}"
+        // include "com.github.kdl-org:kdl4j:${project.kdl_version}" // needed for 26.1
+    }
+    
     // Apache Commons Imaging for Metadata
     implementation "org.apache.commons:commons-imaging:1.0.0-alpha5"
     include "org.apache.commons:commons-imaging:1.0.0-alpha5"
 }
 
+// Helper: Determine if this MC version needs merged sources (V1 mappings)
+// MC 1.21.10+ uses V1 Yarn mappings which are incompatible with splitEnvironmentSourceSets
+def mcVerParts = project.minecraft_version.split('\\.')
+def needsMergedSources = mcVerParts.length >= 3 &&
+    mcVerParts[0].toInteger() == 1 &&
+    (mcVerParts[1].toInteger() > 21 ||
+        (mcVerParts[1].toInteger() == 21 && mcVerParts[2].toInteger() >= 10))
+
 loom {
-    splitEnvironmentSourceSets()
-    
+    if (!needsMergedSources) {
+        splitEnvironmentSourceSets()
+    }
+
     mods {
         "screenshot-manager-enhanced" {
             sourceSet sourceSets.main
-            sourceSet sourceSets.client
+            if (!needsMergedSources) {
+                sourceSet sourceSets.client
+            }
         }
     }
 }
@@ -47,8 +67,20 @@ loom {
 // Map the common source into this project
 sourceSets.main.java.srcDirs += [project(":common").file("src/main/java")]
 sourceSets.main.resources.srcDirs += [project(":common").file("src/main/resources")]
-sourceSets.client.java.srcDirs += [project(":common").file("src/client/java")]
-sourceSets.client.resources.srcDirs += [project(":common").file("src/client/resources")]
+
+// Conditional Source Set Logic
+def uiVersion = project.hasProperty("ui_version") ? project.ui_version : "legacy"
+
+if (!needsMergedSources) {
+    sourceSets.client.java.srcDirs += [project(":common").file("src/client/java")]
+    sourceSets.client.java.srcDirs += [project(":common").file("src/client/java-${uiVersion}")]
+    sourceSets.client.resources.srcDirs += [project(":common").file("src/client/resources")]
+} else {
+    // Merge client source into main for V1 mapping compatibility
+    sourceSets.main.java.srcDirs += [project(":common").file("src/client/java")]
+    sourceSets.main.java.srcDirs += [project(":common").file("src/client/java-${uiVersion}")]
+    sourceSets.main.resources.srcDirs += [project(":common").file("src/client/resources")]
+}
 
 processResources {
     inputs.property "version", project.version
