@@ -364,45 +364,64 @@ public class GalleryScreen extends BaseOwoScreen<FlowLayout> {
 
         Identifier thumb = ScreenshotTextureManager.getOrCreateThumbnail(path, thumbBase);
 
-        var wrapper = Containers.verticalFlow(Sizing.content(), Sizing.content());
-        wrapper.cursorStyle(CursorStyle.HAND);
+        // Content Layer
+        var content = Containers.verticalFlow(Sizing.fill(100), Sizing.content());
+        content.padding(Insets.of(1));
 
         int aspectW = 16;
         int aspectH = 9;
         var texture = Components.texture(thumb, 0, 0, aspectW, aspectH, aspectW, aspectH);
         texture.sizing(Sizing.fixed(w), Sizing.fixed(h));
+        content.child(texture);
 
-        // Padding ensures the border is drawn outside the image content
-        wrapper.padding(Insets.of(1));
-
-        wrapper.child(texture);
-
-        // Use dynamic surface for consistent hover effect instead of event listeners
-        wrapper.surface((context, component) -> {
-            // Use captured mouse coordinates from the render pass to ensure
-            // exact synchronization with Owo-UI's internal logic (tooltips, etc.)
-            if (component.isInBoundingBox(this.lastMouseX, this.lastMouseY)) {
-                Surface.outline(0xFFFFFFFF).draw(context, component);
-            }
-        });
-
-        wrapper.mouseDown().subscribe((mx, my, button) -> {
-            if (button == 0) {
-                MinecraftClient.getInstance()
-                        .setScreen(new SingleImageScreen(this.parent, images, index, this.currentDir));
-                return true;
-            }
-            return false;
-        });
-
+        // Label
         String fileName = path.getFileName().toString();
-        // Date removed as per user request
+        if (fileName.length() > 20 && currentColumns > 4) {
+            fileName = fileName.substring(0, 17) + "...";
+        }
+        var label = Components.label(Text.literal(fileName));
+        label.horizontalTextAlignment(HorizontalAlignment.CENTER);
+        label.sizing(Sizing.fill(100), Sizing.content());
+        label.margins(Insets.top(2));
+        content.child(label);
 
-        wrapper.tooltip(Text.literal(fileName));
+        // Click Layer (Invisible Button)
+        var button = Components.button(Text.empty(), b -> {
+            MinecraftClient.getInstance()
+                    .setScreen(new SingleImageScreen(this.parent, images, index, this.currentDir));
+        });
+        button.sizing(Sizing.fill(100), Sizing.fill(100));
 
-        wrapper.margins(Insets.of(2));
+        // Transparent background
+        button.renderer((context, btn, delta) -> {
+            // Draw outline if hovered (using captured coordinates for sync)
+            if (btn.isInBoundingBox(this.lastMouseX, this.lastMouseY)) {
+                int color = 0xFFFFFFFF;
+                // Manual border drawing using fill() for cross-version compat (drawBorder
+                // missing in 1.21.10+)
+                context.fill(btn.x(), btn.y(), btn.x() + btn.width(), btn.y() + 1, color); // Top
+                context.fill(btn.x(), btn.y() + btn.height() - 1, btn.x() + btn.width(), btn.y() + btn.height(), color); // Bottom
+                context.fill(btn.x(), btn.y(), btn.x() + 1, btn.y() + btn.height(), color); // Left
+                context.fill(btn.x() + btn.width() - 1, btn.y(), btn.x() + btn.width(), btn.y() + btn.height(), color); // Right
+            }
+        });
+        button.cursorStyle(CursorStyle.HAND);
 
-        return wrapper;
+        button.tooltip(Text.literal(path.getFileName().toString()));
+
+        // Stack Layer
+        // Calculate explicit height to prevent StackLayout confusion
+        int fontHeight = MinecraftClient.getInstance().textRenderer.fontHeight;
+        int calculatedHeight = h + fontHeight + 4;
+
+        // Stack Layer
+        var stack = Containers.stack(Sizing.fixed(w), Sizing.fixed(calculatedHeight));
+        stack.child(content);
+        stack.child(button);
+
+        stack.margins(Insets.of(2));
+
+        return stack;
     }
 
     @Override

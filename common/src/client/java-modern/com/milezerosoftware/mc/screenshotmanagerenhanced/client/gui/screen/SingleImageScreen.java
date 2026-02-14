@@ -3,16 +3,9 @@ package com.milezerosoftware.mc.screenshotmanagerenhanced.client.gui.screen;
 import com.milezerosoftware.mc.screenshotmanagerenhanced.client.render.ScreenshotTextureManager;
 import com.milezerosoftware.mc.screenshotmanagerenhanced.client.util.ClipboardUtil;
 import io.wispforest.owo.ui.base.BaseOwoScreen;
-import io.wispforest.owo.ui.component.Components;
-import io.wispforest.owo.ui.component.TextureComponent;
-import io.wispforest.owo.ui.container.Containers;
-import io.wispforest.owo.ui.container.FlowLayout;
-import io.wispforest.owo.ui.core.HorizontalAlignment;
-import io.wispforest.owo.ui.core.Insets;
-import io.wispforest.owo.ui.core.OwoUIAdapter;
-import io.wispforest.owo.ui.core.Sizing;
-import io.wispforest.owo.ui.core.Surface;
-import io.wispforest.owo.ui.core.VerticalAlignment;
+import io.wispforest.owo.ui.component.*;
+import io.wispforest.owo.ui.container.*;
+import io.wispforest.owo.ui.core.*;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.toast.SystemToast;
@@ -42,7 +35,7 @@ public class SingleImageScreen extends BaseOwoScreen<FlowLayout> {
 
     @Override
     protected @NotNull OwoUIAdapter<FlowLayout> createAdapter() {
-        return OwoUIAdapter.create(this, Containers::verticalFlow);
+        return OwoUIAdapter.create(this, UIContainers::verticalFlow);
     }
 
     @Override
@@ -59,17 +52,17 @@ public class SingleImageScreen extends BaseOwoScreen<FlowLayout> {
         Path currentImage = images.get(currentIndex);
 
         // Header
-        var header = Containers.verticalFlow(Sizing.fill(100), Sizing.content());
+        var header = UIContainers.verticalFlow(Sizing.fill(100), Sizing.content());
         header.horizontalAlignment(HorizontalAlignment.CENTER);
         header.margins(Insets.top(10));
 
-        header.child(Components.label(Text.literal(currentImage.getFileName().toString())));
-        header.child(Components.label(Text.literal((currentIndex + 1) + " / " + images.size())));
+        header.child(UIComponents.label(Text.literal(currentImage.getFileName().toString())));
+        header.child(UIComponents.label(Text.literal((currentIndex + 1) + " / " + images.size())));
 
         root.child(header);
 
         // Main Image
-        var imageContainer = Containers.verticalFlow(Sizing.fill(100), Sizing.fill(75));
+        var imageContainer = UIContainers.verticalFlow(Sizing.fill(100), Sizing.fill(75));
         imageContainer.horizontalAlignment(HorizontalAlignment.CENTER);
         imageContainer.verticalAlignment(VerticalAlignment.CENTER);
 
@@ -88,36 +81,36 @@ public class SingleImageScreen extends BaseOwoScreen<FlowLayout> {
         int aspectW = 16;
         int aspectH = 9;
 
-        var texture = Components.texture(textureId, 0, 0, aspectW, aspectH, aspectW, aspectH);
+        var texture = UIComponents.texture(textureId, 0, 0, aspectW, aspectH, aspectW, aspectH);
         texture.sizing(Sizing.fixed(imgWidth), Sizing.fixed(imgHeight));
 
         imageContainer.child(texture);
         root.child(imageContainer);
 
         // Footer / Controls
-        var footer = Containers.horizontalFlow(Sizing.fill(100), Sizing.content());
-        footer.verticalAlignment(VerticalAlignment.CENTER);
+        int minButtonWidth = 260; // Minimal width to fit all buttons
+        int controlWidth = Math.max(imgWidth, minButtonWidth);
 
-        // Align footer buttons with the image edges
-        int sidePadding = (this.width - imgWidth) / 2;
-        footer.padding(Insets.horizontal(sidePadding));
+        // Use Stack for precise edge pinning (matches GalleryScreen)
+        var footer = UIContainers.stack(Sizing.fixed(controlWidth), Sizing.fixed(30));
+        footer.verticalAlignment(VerticalAlignment.CENTER);
 
         /**
          * Left Group: [Back] [Copy] [Delete]
          */
-        var leftGroup = Containers.horizontalFlow(Sizing.content(), Sizing.content());
+        var leftGroup = UIContainers.horizontalFlow(Sizing.content(), Sizing.content());
         leftGroup.gap(5);
 
         int btnHeight = 20;
         int actionBtnWidth = 50;
 
         // Back
-        leftGroup.child(Components.button(Text.literal("Back"), b -> {
+        leftGroup.child(UIComponents.button(Text.literal("Back"), b -> {
             MinecraftClient.getInstance().setScreen(new GalleryScreen(this.parent, this.galleryDir));
         }).sizing(Sizing.fixed(actionBtnWidth), Sizing.fixed(btnHeight)));
 
         // Copy
-        leftGroup.child(Components.button(Text.literal("Copy"), b -> {
+        leftGroup.child(UIComponents.button(Text.literal("Copy"), b -> {
             boolean success = ClipboardUtil.copyImageToClipboard(images.get(currentIndex));
             if (success) {
                 SystemToast.add(
@@ -129,25 +122,24 @@ public class SingleImageScreen extends BaseOwoScreen<FlowLayout> {
         }).sizing(Sizing.fixed(actionBtnWidth), Sizing.fixed(btnHeight)));
 
         // Delete
-        leftGroup.child(Components.button(Text.literal("Delete"), b -> {
+        leftGroup.child(UIComponents.button(Text.literal("Delete"), b -> {
             deleteCurrentImage();
         }).sizing(Sizing.fixed(actionBtnWidth), Sizing.fixed(btnHeight)));
 
+        // Pin Left
+        leftGroup.positioning(Positioning.relative(0, 50));
         footer.child(leftGroup);
 
-        // Spacer to push Nav to right
-        footer.child(Containers.horizontalFlow(Sizing.fill(50), Sizing.fixed(1))); // Expanding spacer
-
         /**
-         * Right Group: [Prev] [Next] (Music Icons)
+         * Right Group: [Prev] [Next]
          */
-        var rightGroup = Containers.horizontalFlow(Sizing.content(), Sizing.content());
+        var rightGroup = UIContainers.horizontalFlow(Sizing.content(), Sizing.content());
         rightGroup.gap(5);
 
         int navBtnWidth = 30;
 
         // Prev (Skip Backward)
-        var prevBtn = Components.button(Text.literal("⏮"), b -> {
+        var prevBtn = UIComponents.button(Text.literal("⏮"), b -> {
             if (currentIndex > 0) {
                 currentIndex--;
                 rebuild();
@@ -158,7 +150,7 @@ public class SingleImageScreen extends BaseOwoScreen<FlowLayout> {
         rightGroup.child(prevBtn);
 
         // Next (Skip Forward)
-        var nextBtn = Components.button(Text.literal("⏭"), b -> {
+        var nextBtn = UIComponents.button(Text.literal("⏭"), b -> {
             if (currentIndex < images.size() - 1) {
                 currentIndex++;
                 rebuild();
@@ -168,6 +160,8 @@ public class SingleImageScreen extends BaseOwoScreen<FlowLayout> {
         nextBtn.active = currentIndex < images.size() - 1;
         rightGroup.child(nextBtn);
 
+        // Pin Right
+        rightGroup.positioning(Positioning.relative(100, 50));
         footer.child(rightGroup);
 
         root.child(footer);

@@ -26,16 +26,9 @@ public class ScreenshotTextureManager {
                 "thumb/" + targetWidth + "_" + System.currentTimeMillis() + "_"
                         + path.getFileName().toString().toLowerCase().replaceAll("[^a-z0-9/._-]", "_"));
 
-        // Register placeholder initially (using a known safe transparent or loading
-        // texture would be better,
-        // but for now we register a temp generic one or just reuse the ID with a dummy
-        // texture)
-        // Actually, we must register *something* so the renderer doesn't crash on
-        // "missing texture"
-        // Let's create a 1x1 transparent native image
+        // Register placeholder
         NativeImage placeholder = new NativeImage(1, 1, true);
-        MinecraftClient.getInstance().getTextureManager().registerTexture(id,
-                new net.minecraft.client.texture.NativeImageBackedTexture(placeholder));
+        registerTextureSafe(id, placeholder);
 
         CACHE.put(key, id);
 
@@ -52,8 +45,7 @@ public class ScreenshotTextureManager {
                 MinecraftClient.getInstance().execute(() -> {
                     // Check if cache still has this key (might have been cleared)
                     if (CACHE.containsKey(key) && CACHE.get(key).equals(id)) {
-                        MinecraftClient.getInstance().getTextureManager().registerTexture(id,
-                                new net.minecraft.client.texture.NativeImageBackedTexture(thumb));
+                        registerTextureSafe(id, thumb);
                     } else {
                         thumb.close(); // Clean up if no longer needed
                     }
@@ -64,6 +56,43 @@ public class ScreenshotTextureManager {
         });
 
         return id;
+    }
+
+    private static void registerTextureSafe(Identifier id, NativeImage image) {
+        try {
+            Class<?> textureClass = net.minecraft.client.texture.NativeImageBackedTexture.class;
+
+            // Try explicit (NativeImage) - 1.20, 1.21.1-1.21.4
+            try {
+                java.lang.reflect.Constructor<?> c = textureClass.getConstructor(NativeImage.class);
+                Object texture = c.newInstance(image);
+                MinecraftClient.getInstance().getTextureManager().registerTexture(id,
+                        (net.minecraft.client.texture.AbstractTexture) texture);
+                return;
+            } catch (NoSuchMethodException e) {
+                // Ignore
+            }
+
+            // Iterate constructors for advanced matching (1.21.5+)
+            for (java.lang.reflect.Constructor<?> c : textureClass.getConstructors()) {
+                Class<?>[] types = c.getParameterTypes();
+
+                // Case: (Supplier, NativeImage) - 1.21.5?
+                if (types.length == 2 && types[1] == NativeImage.class
+                        && java.util.function.Supplier.class.isAssignableFrom(types[0])) {
+                    java.util.function.Supplier<String> sup = () -> "dynamic_" + id.getPath();
+                    Object texture = c.newInstance(sup, image);
+                    MinecraftClient.getInstance().getTextureManager().registerTexture(id,
+                            (net.minecraft.client.texture.AbstractTexture) texture);
+                    return;
+                }
+            }
+
+            System.err.println("[ScreenshotManager] Could not find suitable NativeImageBackedTexture constructor!");
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     public static void clearCache() {
