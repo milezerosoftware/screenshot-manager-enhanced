@@ -21,15 +21,14 @@ public abstract class GameMenuScreenMixin extends Screen {
 
     @Inject(at = @At("TAIL"), method = "initWidgets")
     private void addGalleryButton(CallbackInfo ci) {
-        this.addDrawableChild(ButtonWidget.builder(Text.literal(" 📷 "), button -> {
+        // Use the standard screenshots directory as the entry point
+        // formatting:off
+        Path path = MinecraftClient.getInstance().runDirectory.toPath().resolve("screenshots");
+        // formatting:on
 
-            // todo: change the base path to the mod's set sceenshot folder
-            Path path = MinecraftClient.getInstance().runDirectory.toPath().resolve("screenshots");
-
-            // todo: fix the botton size based on the emoji on line 24
+        // Use a small square button for the camera icon
+        this.addDrawableChild(ButtonWidget.builder(Text.literal("📷"), button -> {
             MinecraftClient.getInstance().setScreen(new GalleryScreen(path));
-        }).dimensions(this.width / 2 + 104, this.height / 4 + 96 + -16, 98, 20).build());
-        // Adjusted width to 98 to fit text, positioned to the right of standard buttons
-        // if layout permits
+        }).dimensions(this.width / 2 + 104, this.height / 4 + 96 + -16, 20, 20).build());
     }
 }

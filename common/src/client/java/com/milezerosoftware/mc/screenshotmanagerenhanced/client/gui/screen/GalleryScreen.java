@@ -1,6 +1,7 @@
 package com.milezerosoftware.mc.screenshotmanagerenhanced.client.gui.screen;
 
 import com.milezerosoftware.mc.screenshotmanagerenhanced.client.render.ScreenshotTextureManager;
+import com.milezerosoftware.mc.screenshotmanagerenhanced.client.util.ClipboardUtil;
 import io.wispforest.owo.ui.base.BaseOwoScreen;
 import io.wispforest.owo.ui.component.Components;
 import io.wispforest.owo.ui.component.LabelComponent;
@@ -11,9 +12,12 @@ import io.wispforest.owo.ui.core.CursorStyle;
 import io.wispforest.owo.ui.core.HorizontalAlignment;
 import io.wispforest.owo.ui.core.Insets;
 import io.wispforest.owo.ui.core.OwoUIAdapter;
+import io.wispforest.owo.ui.core.Positioning;
 import io.wispforest.owo.ui.core.Sizing;
 import io.wispforest.owo.ui.core.Surface;
 import io.wispforest.owo.ui.core.VerticalAlignment;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.toast.SystemToast;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
@@ -222,12 +226,64 @@ public class GalleryScreen extends BaseOwoScreen<FlowLayout> {
         var texture = Components.texture(thumb, 0, 0, thumbWidth, thumbHeight, thumbWidth, thumbHeight);
         texture.cursorStyle(CursorStyle.HAND);
         texture.sizing(Sizing.fixed(w), Sizing.fixed(h));
-        texture.mouseDown().subscribe((cx, cy, button) -> {
-            Util.getOperatingSystem().open(path.toUri());
+
+        // NOTE: Diabling this functionality because its not working the way I want.
+        // texture.mouseDown().subscribe((cx, cy, button) -> {
+        // if (button == 1) {
+        // int absX = texture.x() + (int) cx;
+        // int absY = texture.y() + (int) cy;
+        // showContextMenu(path, absX, absY);
+        // return true;
+        // }
+        // return false;
+        // });
+        // Add margins to create the "padding" between grid items
+
+        return texture.margins(Insets.of(2));
+    }
+
+    private void showContextMenu(Path path, int x, int y) {
+        var overlay = Containers.verticalFlow(Sizing.fill(100), Sizing.fill(100));
+        overlay.id("context-menu-overlay");
+        overlay.horizontalAlignment(HorizontalAlignment.LEFT);
+        overlay.verticalAlignment(VerticalAlignment.TOP);
+        // overlay.z(100);
+        overlay.mouseDown().subscribe((mx, my, button) -> {
+            ((FlowLayout) this.uiAdapter.rootComponent).removeChild(overlay);
             return true;
         });
-        // Add margins to create the "padding" between grid items
-        return texture.margins(Insets.of(2));
+
+        var menu = Containers.verticalFlow(Sizing.content(), Sizing.content());
+        menu.surface(Surface.flat(0xFF000000).and(Surface.outline(0xFFFFFFFF)));
+        menu.padding(Insets.of(2));
+        menu.positioning(Positioning.absolute(x, y));
+
+        menu.mouseDown().subscribe((mx, my, button) -> true);
+
+        var openBtn = Components.button(Text.literal("Open Image"), b -> {
+            Util.getOperatingSystem().open(path.toUri());
+            ((FlowLayout) this.uiAdapter.rootComponent).removeChild(overlay);
+        });
+        openBtn.sizing(Sizing.fixed(120), Sizing.fixed(20));
+        menu.child(openBtn);
+
+        var copyBtn = Components.button(Text.literal("Copy to Clipboard"), b -> {
+            boolean success = ClipboardUtil.copyImageToClipboard(path);
+            if (success) {
+                SystemToast.add(
+                        MinecraftClient.getInstance().getToastManager(),
+                        SystemToast.Type.PERIODIC_NOTIFICATION,
+                        Text.literal("Copied!"),
+                        Text.literal("Image copied to clipboard"));
+            }
+            ((FlowLayout) this.uiAdapter.rootComponent).removeChild(overlay);
+        });
+        copyBtn.sizing(Sizing.fixed(120), Sizing.fixed(20));
+        menu.child(copyBtn);
+
+        overlay.child(menu);
+
+        ((FlowLayout) this.uiAdapter.rootComponent).child(overlay);
     }
 
     @Override
