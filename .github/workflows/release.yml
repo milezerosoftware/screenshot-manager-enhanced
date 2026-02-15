@@ -49,11 +49,35 @@ jobs:
             !fabric/build/libs/*-sources.jar
             !fabric/build/libs/*-dev.jar
 
-  publish:
-    needs: [get-versions, build]
+  create-gh-release:
+    needs: build
     runs-on: ubuntu-24.04
     permissions:
       contents: write
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v4
+      - name: download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: build-*
+          merge-multiple: true
+          path: artifacts/
+      - name: create github release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          draft: true
+          generate_release_notes: true
+          body_path: CHANGELOG.md
+          files: artifacts/*.jar
+
+  publish-platforms:
+    needs: [get-versions, create-gh-release]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -77,12 +101,6 @@ jobs:
           # CurseForge (uncomment when ready)
           # curseforge-id: YOUR_CURSEFORGE_PROJECT_ID
           # curseforge-token: ${{ secrets.CURSEFORGE_TOKEN }}
-          
-          # GitHub Releases
-          github-tag: ${{ github.ref_name }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          github-generate-changelog: true
-          github-draft: true
           
           # Common settings
           files: artifacts/*.jar

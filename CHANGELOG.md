@@ -15,6 +15,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.0] - 2026-02-14
+
+- **In-Game Gallery** (#62):
+  - Core gallery implementation with responsive grid view (`5d4ceb7`)
+  - Single image review screen (`SingleImageScreen`)
+  - Clipboard integration for copying screenshots (`1d298ca`)
+  - Native OS Trash/Recycle Bin support for deletions
+  - Navigation controls (Next/Previous)
+
+### Changed
+
+- **UI Polish**: Gallery UI overhaul with responsive layout and improved interactions (`00f790b`)
+
+### Internal
+
+- **Architecture**: Multi-version project restructuring for future loader support (`2d1da5b`)
+- **Testing**: Expanded unit test coverage for gallery features (`c8d1e4b`)
+
+---
+
 ## [1.3.0] - 2026-02-01
 
 ### Added
