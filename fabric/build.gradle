@@ -31,10 +31,10 @@ dependencies {
     modImplementation("com.terraformersmc:modmenu:${project.modmenu_version}")
     
     // owo-lib
-    modImplementation("io.wispforest:owo-lib:${project.owo_version}") {
-        include "io.wispforest:owo-lib:${project.owo_version}"
-        // include "com.github.kdl-org:kdl4j:${project.kdl_version}" // needed for 26.1
-    }
+    // owo-lib
+    modImplementation("io.wispforest:owo-lib:${project.owo_version}")
+    include "io.wispforest:owo-lib:${project.owo_version}"
+    // include "com.github.kdl-org:kdl4j:${project.kdl_version}" // needed for 26.1
     
     // Apache Commons Imaging for Metadata
     implementation "org.apache.commons:commons-imaging:1.0.0-alpha5"

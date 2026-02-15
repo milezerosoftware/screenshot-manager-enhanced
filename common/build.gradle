@@ -41,11 +41,11 @@ dependencies {
     modImplementation "com.terraformersmc:modmenu:${project.modmenu_version}"
     
     // owo-lib
-    modImplementation("io.wispforest:owo-lib:${project.owo_version}") {
-        include "io.wispforest:owo-lib:${project.owo_version}"
-        // include "io.wispforest:owo-sentinel:${project.owo_version}"
-        // include "com.github.kdl-org:kdl4j:${project.kdl_version}" // needed for 26.1
-    }
+    // owo-lib
+    modImplementation("io.wispforest:owo-lib:${project.owo_version}")
+    include "io.wispforest:owo-lib:${project.owo_version}"
+    // include "io.wispforest:owo-sentinel:${project.owo_version}"
+    // include "com.github.kdl-org:kdl4j:${project.kdl_version}" // needed for 26.1
     
     // Testing
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
