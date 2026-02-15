@@ -9,6 +9,7 @@ A mod designed to keep your Minecraft screenshots organized automatically. Say g
 ## ✨ Features
 
 * **Automatic Organization**: Screenshots are instantly sorted into subfolders upon capture.
+* **In-Game Gallery** 📸: Browse, manage, and share your screenshots directly from within Minecraft.
 * **Per-World Configuration**: Customize settings for you single-player or specific server worlds.
 * **In-Game Configuration**: Fully configurable via [Mod Menu](https://modrinth.com/mod/modmenu)
 * **Flexible Grouping Modes**: Customize how you want your folders structured. The mod generates paths based on your current context.
@@ -27,6 +28,15 @@ A mod designed to keep your Minecraft screenshots organized automatically. Say g
     * Example: `screenshots/My_Survival_World/2025-01-30/minecraft_the_nether/`
   * **`NONE`**: Disables grouping. Screenshots are saved directly in the screenshots folder (standard Minecraft behavior).
     * Example: `screenshots/`
+
+### 📸 In-Game Gallery
+
+Manage your moments without leaving the game!
+
+* **Browse**: View screenshots in a responsive grid.
+* **Review**: Click any image for a full-screen view.
+* **Organize**: Use the **Copy** button to share or **Delete** to clean up unwanted screenshots.
+* **Navigate**: Cycle through your collection with Next/Previous controls.
 
 ### ⚗️ Advanced Features
 
