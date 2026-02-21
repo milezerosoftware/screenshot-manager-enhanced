@@ -1,0 +1,31 @@
+modLoader="javafml"
+loaderVersion="[21,)"
+license="MIT"
+
+[[mods]]
+modId="screenshot_manager_enhanced"
+version="${file.jarVersion}"
+displayName="Screenshot Manager Enhanced"
+displayURL="https://modrinth.com/mod/screenshot-manager-enhanced"
+logoFile="icon.png"
+authors="scriptmunkee"
+description='''
+Manages screenshot storage locations dynamically based on the current world or server
+'''
+
+[[dependencies.screenshot_manager_enhanced]]
+    modId="neoforge"
+    type="required"
+    versionRange="[21,)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.screenshot_manager_enhanced]]
+    modId="minecraft"
+    type="required"
+    versionRange="[1.21.1,1.22)"
+    ordering="NONE"
+    side="BOTH"
+
+[[mixins]]
+config="screenshot-manager-enhanced.client.mixins.json"

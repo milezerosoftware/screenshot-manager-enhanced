@@ -9,6 +9,7 @@ on:
     paths:
       - "common/**"
       - "fabric/**"
+      - "neoforge/**"
       - "buildSrc/**"
       - "versionProperties/**"
       - "build.gradle"
@@ -19,6 +20,7 @@ on:
     paths:
       - "common/**"
       - "fabric/**"
+      - "neoforge/**"
       - "buildSrc/**"
       - "versionProperties/**"
       - "build.gradle"
@@ -62,9 +64,12 @@ jobs:
       - name: test
         run: ./gradlew :common:test -Pmc_ver=${{ matrix.mc_ver }}
       - name: build
-        run: ./gradlew :fabric:build -Pmc_ver=${{ matrix.mc_ver }}
+        run: ./gradlew build -Pmc_ver=${{ matrix.mc_ver }}
       - name: capture build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: Artifacts-${{ matrix.mc_ver }}
-          path: fabric/build/libs/
+          path: |
+            */build/libs/*.jar
+            !*/build/libs/*-sources.jar
+            !*/build/libs/*-dev.jar

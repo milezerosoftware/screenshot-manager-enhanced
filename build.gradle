@@ -148,8 +148,19 @@ def getVersionProperties() {
 
 def versionList = getVersionProperties()
 
+// Helper to load properties for a specific version
+def loadVersionProps(version) {
+    def file = file("versionProperties/${version}.properties")
+    def props = new Properties()
+    if (file.exists()) { file.withInputStream { props.load(it) } }
+    return props
+}
+
+def fabricVersions = versionList.findAll { loadVersionProps(it).getProperty("builds_for", "").contains("fabric") }
+def neoforgeVersions = versionList.findAll { loadVersionProps(it).getProperty("builds_for", "").contains("neoforge") }
+
 // Individual Fabric Build Tasks per version
-versionList.each { mcVersion ->
+fabricVersions.each { mcVersion ->
     tasks.register("buildFabric_${mcVersion.replace('.', '_')}", Exec) {
         group = "build all"
         description = "Build Fabric mod for Minecraft ${mcVersion}"
@@ -161,12 +172,28 @@ versionList.each { mcVersion ->
 tasks.register("buildAllFabric") {
     group = "build all"
     description = "Build Fabric mod for all configured Minecraft versions"
-    dependsOn versionList.collect { "buildFabric_${it.replace('.', '_')}" }
+    dependsOn fabricVersions.collect { "buildFabric_${it.replace('.', '_')}" }
+}
+
+// Individual NeoForge Build Tasks per version
+neoforgeVersions.each { mcVersion ->
+    tasks.register("buildNeoForge_${mcVersion.replace('.', '_')}", Exec) {
+        group = "build all"
+        description = "Build NeoForge mod for Minecraft ${mcVersion}"
+        commandLine "./gradlew", ":neoforge:build", "-Pmc_ver=${mcVersion}"
+    }
+}
+
+// Aggregate NeoForge Build Task
+tasks.register("buildAllNeoForge") {
+    group = "build all"
+    description = "Build NeoForge mod for all configured Minecraft versions"
+    dependsOn neoforgeVersions.collect { "buildNeoForge_${it.replace('.', '_')}" }
 }
 
 // Future Aggregate Task (Loader-agnostic placeholder)
 tasks.register("buildAllAll") {
     group = "build all"
     description = "Build all loaders for all configured Minecraft versions"
-    dependsOn "buildAllFabric"
+    dependsOn "buildAllFabric", "buildAllNeoForge"
 }

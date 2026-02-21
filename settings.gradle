@@ -1,5 +1,9 @@
 pluginManagement {
 	repositories {
+        maven {
+            name = 'NeoForge'
+            url = 'https://maven.neoforged.net/releases'
+        }
 		maven {
 			name = 'Fabric'
 			url = 'https://maven.fabricmc.net/'
@@ -38,6 +42,10 @@ println "Loaded Minecraft version configuration for: ${mcVer}"
 include 'common'
 if (settings.ext.builds_for.contains("fabric")) {
     include 'fabric'
+}
+
+if (settings.ext.builds_for.contains("neoforge")) {
+    include 'neoforge'
 }
 
 rootProject.name = 'screenshot-manager-enhanced'
