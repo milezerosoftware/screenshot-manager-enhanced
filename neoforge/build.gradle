@@ -20,6 +20,16 @@ repositories {
 neoForge {
     version = project.neoforge_version
 
+    runs {
+        client {
+            client()
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_version
+            // Optional: memory limit
+            systemProperty 'forge.logging.console.level', 'debug'
+            systemProperty 'forge.logging.markers', 'REGISTRIES'
+        }
+    }
+
     mods {
         screenshot_manager_enhanced {
             sourceSet sourceSets.main
