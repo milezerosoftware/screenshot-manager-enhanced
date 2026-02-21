@@ -12,7 +12,7 @@ base {
 
 repositories {
     maven { url = "https://maven.shedaniel.me/" }
-    maven { url = "https://maven.wispforest.io/releases/" }
+    maven { url = "https://api.modrinth.com/maven" }
     maven { url = "https://maven.neoforged.net/releases" }
     maven { url = "https://jitpack.io" }
 }
@@ -38,18 +38,32 @@ neoForge {
 }
 
 dependencies {
-    implementation project(":common")
+    implementation(project(":common")) {
+        exclude group: "net.fabricmc"
+        exclude group: "net.fabricmc.fabric-api"
+        exclude group: "me.shedaniel.cloth", module: "cloth-config-fabric"
+        exclude group: "com.terraformersmc", module: "modmenu"
+        exclude group: "io.wispforest", module: "owo-lib"
+    }
     
     // Cloth Config
     implementation("me.shedaniel.cloth:cloth-config-neoforge:${project.cloth_config_version}")
     
-    // owo-lib (will attempt standard coordinate, might need adjustment)
-    implementation("io.wispforest:owo-lib:${project.owo_version}")
+    // owo-lib via Modrinth
+    def owoVer = project.hasProperty('owo_version_neoforge') ? project.owo_version_neoforge : project.owo_version
+    implementation("maven.modrinth:owo-lib:${owoVer}") {
+        exclude group: "net.fabricmc"
+        exclude group: "net.fabricmc.fabric-api"
+    }
     
     // Apache Commons Imaging for Metadata
     implementation("org.apache.commons:commons-imaging:1.0.0-alpha5") {
         exclude group: "commons-io", module: "commons-io"
     }
+}
+
+configurations.configureEach {
+    resolutionStrategy.force("commons-io:commons-io:2.15.1")
 }
 
 tasks.withType(JavaCompile).configureEach {
