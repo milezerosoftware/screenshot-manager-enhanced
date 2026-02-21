@@ -39,15 +39,15 @@ jobs:
       - name: make gradle wrapper executable
         run: chmod +x ./gradlew
       - name: build
-        run: ./gradlew :fabric:build -Pmc_ver=${{ matrix.mc_ver }} -PskipSources=true
+        run: ./gradlew build -Pmc_ver=${{ matrix.mc_ver }} -PskipSources=true
       - name: upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: build-${{ matrix.mc_ver }}
           path: |
-            fabric/build/libs/*.jar
-            !fabric/build/libs/*-sources.jar
-            !fabric/build/libs/*-dev.jar
+            */build/libs/*.jar
+            !*/build/libs/*-sources.jar
+            !*/build/libs/*-dev.jar
 
   create-gh-release:
     needs: build
@@ -98,16 +98,15 @@ jobs:
           modrinth-id: screenshot-manager-enhanced
           modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
           
-          # CurseForge (uncomment when ready)
-          # curseforge-id: YOUR_CURSEFORGE_PROJECT_ID
-          # curseforge-token: ${{ secrets.CURSEFORGE_TOKEN }}
+          # CurseForge
+          curseforge-id: 1458720
+          curseforge-token: ${{ secrets.CURSEFORGE_TOKEN }}
           
           # Common settings
           files: artifacts/*.jar
           name: Screenshot Manager Enhanced ${{ github.ref_name }} for MC ${{ matrix.mc_ver }}
           version: ${{ github.ref_name }}+${{ matrix.mc_ver }}
           game-versions: ${{ matrix.mc_ver }}
-          loaders: fabric
           version-type: release
           changelog-file: CHANGELOG.md
           
