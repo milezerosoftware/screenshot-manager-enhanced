@@ -1,6 +1,24 @@
-plugins {
-	id 'fabric-loom' version "${loom_version}"
-	id 'maven-publish'
+buildscript {
+	repositories {
+		maven {
+			name = 'Fabric'
+			url = 'https://maven.fabricmc.net/'
+		}
+		mavenCentral()
+	}
+	dependencies {
+		classpath "net.fabricmc:fabric-loom:${loom_version}"
+	}
+}
+
+apply plugin: 'maven-publish'
+
+def isUnobfuscated = project.ext.has("isUnobfuscated") && project.ext.isUnobfuscated
+
+if (isUnobfuscated) {
+	apply plugin: 'net.fabricmc.fabric-loom'
+} else {
+	apply plugin: 'fabric-loom'
 }
 
 def getVersionSuffix() {
@@ -66,16 +84,22 @@ loom {
 dependencies {
 	// To change the versions see the gradle.properties file
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
-	mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
-	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
-	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+	if (project.hasProperty("yarn_mappings") && project.yarn_mappings) {
+		mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
+	} else if (!isUnobfuscated) {
+		mappings project.loom.officialMojangMappings()
+	}
+	def impl = isUnobfuscated ? "implementation" : "modImplementation"
+
+	"${impl}" "net.fabricmc:fabric-loader:${project.loader_version}"
+	"${impl}" "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 
 	// Cloth Config - The 'exclude' prevents duplicate Fabric API loading
-	modImplementation("me.shedaniel.cloth:cloth-config-fabric:${cloth_config_version}") {
+	"${impl}"("me.shedaniel.cloth:cloth-config-fabric:${cloth_config_version}") {
 		exclude(group: "net.fabricmc.fabric-api")
 	}
 	// ModMenu
-	modImplementation("com.terraformersmc:modmenu:${modmenu_version}")
+	"${impl}"("com.terraformersmc:modmenu:${modmenu_version}")
 
 	// Testing
 	testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
@@ -96,7 +120,7 @@ processResources {
 }
 
 tasks.withType(JavaCompile).configureEach {
-	it.options.release = 21
+	it.options.release = Integer.parseInt(project.java_version)
 }
 
 java {
@@ -107,8 +131,8 @@ java {
 		withSourcesJar()
 	}
 
-	sourceCompatibility = JavaVersion.VERSION_21
-	targetCompatibility = JavaVersion.VERSION_21
+	sourceCompatibility = JavaVersion.toVersion(project.java_version)
+	targetCompatibility = JavaVersion.toVersion(project.java_version)
 }
 
 jar {
@@ -140,10 +164,35 @@ publishing {
 
 // --- Build-All Automation ---
 
+def isBelowBaseline(String mcVersion) {
+    if (mcVersion.startsWith("26.")) return false
+    def parts = mcVersion.split('\\.')
+    if (parts.length < 2) return true
+    try {
+        int major = parts[0].toInteger()
+        int minor = parts[1].toInteger()
+        int patch = parts.length >= 3 ? parts[2].toInteger() : 0
+        if (major < 1) return true
+        if (major == 1) {
+            if (minor < 21) return true
+            if (minor == 21 && patch < 11) return true
+        }
+        return false
+    } catch (NumberFormatException e) {
+        return true
+    }
+}
+
 def getVersionProperties() {
     def propsDir = file("versionProperties")
     if (!propsDir.exists()) return []
-    return propsDir.listFiles().findAll { it.name.endsWith(".properties") }.collect { it.name.replace(".properties", "") }
+    return propsDir.listFiles().findAll { it.name.endsWith(".properties") }.collect { it.name.replace(".properties", "") }.findAll { mcVersion ->
+        if (isBelowBaseline(mcVersion)) return false
+        def propsFile = file("versionProperties/${mcVersion}.properties")
+        def props = new Properties()
+        propsFile.withInputStream { props.load(it) }
+        return props.getProperty("build_disabled") != "true"
+    }
 }
 
 def versionList = getVersionProperties()

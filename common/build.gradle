@@ -1,4 +1,10 @@
-apply plugin: 'fabric-loom'
+def isUnobfuscated = project.ext.has("isUnobfuscated") && project.ext.isUnobfuscated
+
+if (isUnobfuscated) {
+    apply plugin: 'net.fabricmc.fabric-loom'
+} else {
+    apply plugin: 'fabric-loom'
+}
 
 // Helper: Determine if this MC version needs merged sources (V1 mappings)
 // MC 1.21.10+ uses V1 Yarn mappings which are incompatible with splitEnvironmentSourceSets
@@ -6,7 +12,8 @@ def mcVerParts = project.minecraft_version.split('\\.')
 def needsMergedSources = mcVerParts.length >= 3 &&
     mcVerParts[0].toInteger() == 1 &&
     (mcVerParts[1].toInteger() > 21 ||
-        (mcVerParts[1].toInteger() == 21 && mcVerParts[2].toInteger() >= 10))
+        (mcVerParts[1].toInteger() == 21 && mcVerParts[2].toInteger() >= 10)) &&
+    (project.hasProperty("yarn_mappings") && project.yarn_mappings && !project.yarn_mappings.toString().isEmpty())
 
 def uiVersion = project.hasProperty("ui_version") ? project.ui_version : "legacy"
 
@@ -33,16 +40,22 @@ repositories {
 dependencies {
     // These must match the property names in versionProperties
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
-    mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
-    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    if (project.hasProperty("yarn_mappings") && project.yarn_mappings) {
+        mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
+    } else if (!isUnobfuscated) {
+        mappings project.loom.officialMojangMappings()
+    }
+    def impl = isUnobfuscated ? "implementation" : "modImplementation"
+
+    "${impl}" "net.fabricmc:fabric-loader:${project.loader_version}"
     
     // Common mod dependencies
-    modImplementation "me.shedaniel.cloth:cloth-config-fabric:${project.cloth_config_version}"
-    modImplementation "com.terraformersmc:modmenu:${project.modmenu_version}"
+    "${impl}" "me.shedaniel.cloth:cloth-config-fabric:${project.cloth_config_version}"
+    "${impl}" "com.terraformersmc:modmenu:${project.modmenu_version}"
     
     // owo-lib
     // owo-lib
-    modImplementation("io.wispforest:owo-lib:${project.owo_version}")
+    "${impl}"("io.wispforest:owo-lib:${project.owo_version}")
     include "io.wispforest:owo-lib:${project.owo_version}"
     // include "io.wispforest:owo-sentinel:${project.owo_version}"
     // include "com.github.kdl-org:kdl4j:${project.kdl_version}" // needed for 26.1
