@@ -25,7 +25,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Util;
 import org.jetbrains.annotations.NotNull;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 import java.io.File;
 import java.io.IOException;
@@ -38,20 +37,11 @@ public class GalleryScreen extends BaseOwoScreen<FlowLayout> {
     private final Path rootDir;
     private final Screen parent;
     private static int columns = 3; // Default to 3x3 as requested, static for session persistence
-    private int lastMouseX = 0;
-    private int lastMouseY = 0;
 
     public GalleryScreen(Screen parent) {
         this.parent = parent;
         this.rootDir = Minecraft.getInstance().gameDirectory.toPath().resolve("screenshots");
         this.currentDir = resolveStartPath();
-    }
-
-    @Override
-    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
-        this.lastMouseX = mouseX;
-        this.lastMouseY = mouseY;
-        super.extractRenderState(context, mouseX, mouseY, delta);
     }
 
     public GalleryScreen(Screen parent, Path currentDir) {
@@ -371,10 +361,14 @@ public class GalleryScreen extends BaseOwoScreen<FlowLayout> {
         });
         button.sizing(Sizing.fill(100), Sizing.fill(100));
 
+        final boolean[] hovered = {false};
+        button.mouseEnter().subscribe(() -> hovered[0] = true);
+        button.mouseLeave().subscribe(() -> hovered[0] = false);
+
         // Transparent background
         button.renderer((context, btn, delta) -> {
-            // Draw outline if hovered (using captured coordinates for sync)
-            if (btn.isInBoundingBox(this.lastMouseX, this.lastMouseY)) {
+            // Draw outline if hovered
+            if (hovered[0]) {
                 int color = 0xFFFFFFFF;
                 context.fill(btn.x(), btn.y(), btn.x() + btn.width(), btn.y() + 1, color); // Top
                 context.fill(btn.x(), btn.y() + btn.height() - 1, btn.x() + btn.width(), btn.y() + btn.height(), color); // Bottom

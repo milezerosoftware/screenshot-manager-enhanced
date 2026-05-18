@@ -175,4 +175,8 @@ public class WorldUtils {
         }
         return "UNKNOWN";
     }
+
+    public static long getDayTime(net.minecraft.client.multiplayer.ClientLevel world) {
+        return world.getOverworldClockTime();
+    }
 }

@@ -60,7 +60,7 @@ public class ScreenshotMetadataCollector {
         String coordinates = formatCoordinates(player);
 
         // In-Game Days
-        double days = world != null ? world.getDayTime() / 24000.0 : 0;
+        double days = world != null ? WorldUtils.getDayTime(world) / 24000.0 : 0;
         String daysPlayed = String.format("%.2f d", days);
 
         // Real-Time World Age (player's total play time in this world)
