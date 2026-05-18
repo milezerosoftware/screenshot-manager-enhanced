@@ -1,8 +1,10 @@
 package com.milezerosoftware.mc.screenshotmanagerenhanced.client.render;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.texture.NativeImage;
-import net.minecraft.util.Identifier;
+import net.minecraft.client.Minecraft;
+import com.mojang.blaze3d.platform.NativeImage;
+import net.minecraft.resources.Identifier;
+import net.minecraft.client.renderer.texture.AbstractTexture;
+import net.minecraft.client.renderer.texture.DynamicTexture;
 
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -13,7 +15,7 @@ import java.util.Map;
 public class ScreenshotTextureManager {
     private static final Map<String, Identifier> CACHE = new HashMap<>();
 
-    private static final Identifier LOADING_ID = Identifier.of("minecraft", "textures/item/clock_00.png"); // Temporary
+    private static final Identifier LOADING_ID = Identifier.fromNamespaceAndPath("minecraft", "textures/item/clock_00.png"); // Temporary
                                                                                                            // placeholder
 
     public static Identifier getOrCreateThumbnail(Path path, int targetWidth) {
@@ -22,7 +24,7 @@ public class ScreenshotTextureManager {
             return CACHE.get(key);
 
         // Generate a unique ID for this request
-        Identifier id = Identifier.of("screenshot-manager-enhanced",
+        Identifier id = Identifier.fromNamespaceAndPath("screenshot-manager-enhanced",
                 "thumb/" + targetWidth + "_" + System.currentTimeMillis() + "_"
                         + path.getFileName().toString().toLowerCase().replaceAll("[^a-z0-9/._-]", "_"));
 
@@ -42,7 +44,7 @@ public class ScreenshotTextureManager {
                 fullImg.close();
 
                 // Upload on Main Thread
-                MinecraftClient.getInstance().execute(() -> {
+                Minecraft.getInstance().execute(() -> {
                     // Check if cache still has this key (might have been cleared)
                     if (CACHE.containsKey(key) && CACHE.get(key).equals(id)) {
                         registerTextureSafe(id, thumb);
@@ -60,14 +62,14 @@ public class ScreenshotTextureManager {
 
     private static void registerTextureSafe(Identifier id, NativeImage image) {
         try {
-            Class<?> textureClass = net.minecraft.client.texture.NativeImageBackedTexture.class;
+            Class<?> textureClass = DynamicTexture.class;
 
             // Try explicit (NativeImage) - 1.20, 1.21.1-1.21.4
             try {
                 java.lang.reflect.Constructor<?> c = textureClass.getConstructor(NativeImage.class);
                 Object texture = c.newInstance(image);
-                MinecraftClient.getInstance().getTextureManager().registerTexture(id,
-                        (net.minecraft.client.texture.AbstractTexture) texture);
+                Minecraft.getInstance().getTextureManager().register(id,
+                        (AbstractTexture) texture);
                 return;
             } catch (NoSuchMethodException e) {
                 // Ignore
@@ -82,8 +84,8 @@ public class ScreenshotTextureManager {
                         && java.util.function.Supplier.class.isAssignableFrom(types[0])) {
                     java.util.function.Supplier<String> sup = () -> "dynamic_" + id.getPath();
                     Object texture = c.newInstance(sup, image);
-                    MinecraftClient.getInstance().getTextureManager().registerTexture(id,
-                            (net.minecraft.client.texture.AbstractTexture) texture);
+                    Minecraft.getInstance().getTextureManager().register(id,
+                            (AbstractTexture) texture);
                     return;
                 }
             }
@@ -96,7 +98,7 @@ public class ScreenshotTextureManager {
     }
 
     public static void clearCache() {
-        CACHE.values().forEach(id -> MinecraftClient.getInstance().getTextureManager().destroyTexture(id));
+        CACHE.values().forEach(id -> Minecraft.getInstance().getTextureManager().release(id));
         CACHE.clear();
     }
 }
