@@ -48,6 +48,7 @@ dependencies {
     def impl = isUnobfuscated ? "implementation" : "modImplementation"
 
     "${impl}" "net.fabricmc:fabric-loader:${project.loader_version}"
+    "${impl}" "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
     
     // Common mod dependencies
     "${impl}" "me.shedaniel.cloth:cloth-config-fabric:${project.cloth_config_version}"
