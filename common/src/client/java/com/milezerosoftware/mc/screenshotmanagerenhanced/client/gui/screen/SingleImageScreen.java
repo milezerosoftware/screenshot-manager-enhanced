@@ -6,11 +6,11 @@ import io.wispforest.owo.ui.base.BaseOwoScreen;
 import io.wispforest.owo.ui.component.*;
 import io.wispforest.owo.ui.container.*;
 import io.wispforest.owo.ui.core.*;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.toast.SystemToast;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.components.toasts.SystemToast;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
@@ -45,7 +45,7 @@ public class SingleImageScreen extends BaseOwoScreen<FlowLayout> {
         root.verticalAlignment(VerticalAlignment.CENTER);
 
         if (images.isEmpty() || currentIndex < 0 || currentIndex >= images.size()) {
-            this.close();
+            this.onClose();
             return;
         }
 
@@ -56,8 +56,8 @@ public class SingleImageScreen extends BaseOwoScreen<FlowLayout> {
         header.horizontalAlignment(HorizontalAlignment.CENTER);
         header.margins(Insets.top(10));
 
-        header.child(UIComponents.label(Text.literal(currentImage.getFileName().toString())));
-        header.child(UIComponents.label(Text.literal((currentIndex + 1) + " / " + images.size())));
+        header.child(UIComponents.label(Component.literal(currentImage.getFileName().toString())));
+        header.child(UIComponents.label(Component.literal((currentIndex + 1) + " / " + images.size())));
 
         root.child(header);
 
@@ -105,24 +105,24 @@ public class SingleImageScreen extends BaseOwoScreen<FlowLayout> {
         int actionBtnWidth = 50;
 
         // Back
-        leftGroup.child(UIComponents.button(Text.literal("Back"), b -> {
-            MinecraftClient.getInstance().setScreen(new GalleryScreen(this.parent, this.galleryDir));
+        leftGroup.child(UIComponents.button(Component.literal("Back"), b -> {
+            Minecraft.getInstance().setScreen(new GalleryScreen(this.parent, this.galleryDir));
         }).sizing(Sizing.fixed(actionBtnWidth), Sizing.fixed(btnHeight)));
 
         // Copy
-        leftGroup.child(UIComponents.button(Text.literal("Copy"), b -> {
+        leftGroup.child(UIComponents.button(Component.literal("Copy"), b -> {
             boolean success = ClipboardUtil.copyImageToClipboard(images.get(currentIndex));
             if (success) {
                 SystemToast.add(
-                        MinecraftClient.getInstance().getToastManager(),
-                        SystemToast.Type.PERIODIC_NOTIFICATION,
-                        Text.literal("Copied!"),
-                        Text.literal("Image copied to clipboard"));
+                        Minecraft.getInstance().getToastManager(),
+                        SystemToast.SystemToastId.PERIODIC_NOTIFICATION,
+                        Component.literal("Copied!"),
+                        Component.literal("Image copied to clipboard"));
             }
         }).sizing(Sizing.fixed(actionBtnWidth), Sizing.fixed(btnHeight)));
 
         // Delete
-        leftGroup.child(UIComponents.button(Text.literal("Delete"), b -> {
+        leftGroup.child(UIComponents.button(Component.literal("Delete"), b -> {
             deleteCurrentImage();
         }).sizing(Sizing.fixed(actionBtnWidth), Sizing.fixed(btnHeight)));
 
@@ -139,7 +139,7 @@ public class SingleImageScreen extends BaseOwoScreen<FlowLayout> {
         int navBtnWidth = 30;
 
         // Prev (Skip Backward)
-        var prevBtn = UIComponents.button(Text.literal("⏮"), b -> {
+        var prevBtn = UIComponents.button(Component.literal("⏮"), b -> {
             if (currentIndex > 0) {
                 currentIndex--;
                 rebuild();
@@ -150,7 +150,7 @@ public class SingleImageScreen extends BaseOwoScreen<FlowLayout> {
         rightGroup.child(prevBtn);
 
         // Next (Skip Forward)
-        var nextBtn = UIComponents.button(Text.literal("⏭"), b -> {
+        var nextBtn = UIComponents.button(Component.literal("⏭"), b -> {
             if (currentIndex < images.size() - 1) {
                 currentIndex++;
                 rebuild();
@@ -198,7 +198,7 @@ public class SingleImageScreen extends BaseOwoScreen<FlowLayout> {
             ScreenshotTextureManager.clearCache();
 
             if (images.isEmpty()) {
-                this.close(); // Return to gallery
+                this.onClose(); // Return to gallery
             } else {
                 if (currentIndex >= images.size()) {
                     currentIndex = images.size() - 1;
@@ -208,19 +208,19 @@ public class SingleImageScreen extends BaseOwoScreen<FlowLayout> {
         } catch (IOException e) {
             e.printStackTrace();
             SystemToast.add(
-                    MinecraftClient.getInstance().getToastManager(),
-                    SystemToast.Type.PERIODIC_NOTIFICATION,
-                    Text.literal("Error"),
-                    Text.literal("Failed to delete file"));
+                    Minecraft.getInstance().getToastManager(),
+                    SystemToast.SystemToastId.PERIODIC_NOTIFICATION,
+                    Component.literal("Error"),
+                    Component.literal("Failed to delete file"));
         }
     }
 
     @Override
-    public void close() {
+    public void onClose() {
         if (parent != null) {
-            this.client.setScreen(new GalleryScreen(this.parent, this.galleryDir));
+            this.minecraft.setScreen(new GalleryScreen(this.parent, this.galleryDir));
         } else {
-            super.close();
+            super.onClose();
         }
     }
 

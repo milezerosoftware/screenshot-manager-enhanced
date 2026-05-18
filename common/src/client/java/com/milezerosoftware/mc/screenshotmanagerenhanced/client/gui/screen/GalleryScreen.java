@@ -19,10 +19,10 @@ import io.wispforest.owo.ui.core.Sizing;
 import io.wispforest.owo.ui.core.Surface;
 import io.wispforest.owo.ui.core.UIComponent;
 import io.wispforest.owo.ui.core.VerticalAlignment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.Util;
 import org.jetbrains.annotations.NotNull;
 
@@ -37,34 +37,25 @@ public class GalleryScreen extends BaseOwoScreen<FlowLayout> {
     private final Path rootDir;
     private final Screen parent;
     private static int columns = 3; // Default to 3x3 as requested, static for session persistence
-    private int lastMouseX = 0;
-    private int lastMouseY = 0;
 
     public GalleryScreen(Screen parent) {
         this.parent = parent;
-        this.rootDir = MinecraftClient.getInstance().runDirectory.toPath().resolve("screenshots");
+        this.rootDir = Minecraft.getInstance().gameDirectory.toPath().resolve("screenshots");
         this.currentDir = resolveStartPath();
-    }
-
-    @Override
-    public void render(net.minecraft.client.gui.DrawContext context, int mouseX, int mouseY, float delta) {
-        this.lastMouseX = mouseX;
-        this.lastMouseY = mouseY;
-        super.render(context, mouseX, mouseY, delta);
     }
 
     public GalleryScreen(Screen parent, Path currentDir) {
         this.parent = parent;
-        this.rootDir = MinecraftClient.getInstance().runDirectory.toPath().resolve("screenshots");
+        this.rootDir = Minecraft.getInstance().gameDirectory.toPath().resolve("screenshots");
         this.currentDir = currentDir != null ? currentDir : resolveStartPath();
     }
 
     private Path resolveStartPath() {
         ModConfig config = ConfigManager.getInstance();
-        File gameDir = MinecraftClient.getInstance().runDirectory;
+        File gameDir = Minecraft.getInstance().gameDirectory;
         File screenshotsDir = new File(gameDir, "screenshots");
 
-        if (MinecraftClient.getInstance().world == null) {
+        if (Minecraft.getInstance().level == null) {
             return ScreenshotPathGenerator.getScreenshotDirectory(screenshotsDir, config, null, "", "", null).toPath();
         }
 
@@ -100,7 +91,7 @@ public class GalleryScreen extends BaseOwoScreen<FlowLayout> {
         // Left Group (Up + Label) - Pinned Left
         var topLeft = UIContainers.horizontalFlow(Sizing.content(), Sizing.content());
         topLeft.verticalAlignment(VerticalAlignment.CENTER);
-        topLeft.child(UIComponents.button(Text.literal("↑"), b -> {
+        topLeft.child(UIComponents.button(Component.literal("↑"), b -> {
             Path parentPath = currentDir.getParent();
             if (parentPath != null && (parentPath.startsWith(rootDir) || parentPath.equals(rootDir))) {
                 currentDir = parentPath;
@@ -108,7 +99,7 @@ public class GalleryScreen extends BaseOwoScreen<FlowLayout> {
             }
         }).id("up-button").sizing(Sizing.fixed(20)));
 
-        topLeft.child(UIComponents.label(Text.literal("screenshots/"))
+        topLeft.child(UIComponents.label(Component.literal("screenshots/"))
                 .id("path-label")
                 .margins(Insets.left(10)));
 
@@ -117,7 +108,7 @@ public class GalleryScreen extends BaseOwoScreen<FlowLayout> {
         topBar.child(topLeft);
 
         // Right Group (Columns) - Pinned Right
-        var topRight = UIComponents.button(Text.literal(" " + columns + " Columns "), b -> {
+        var topRight = UIComponents.button(Component.literal(" " + columns + " Columns "), b -> {
             cycleGridSize(b);
             refresh(root);
         }).id("grid-toggle");
@@ -142,15 +133,15 @@ public class GalleryScreen extends BaseOwoScreen<FlowLayout> {
         bottomBar.padding(Insets.horizontal(20));
 
         // Back Button (Left) - Pinned Left
-        var backBtn = UIComponents.button(Text.literal("Back"), b -> {
-            this.close();
+        var backBtn = UIComponents.button(Component.literal("Back"), b -> {
+            this.onClose();
         }).sizing(Sizing.fixed(90), Sizing.fixed(20));
         backBtn.positioning(Positioning.relative(0, 50));
         bottomBar.child(backBtn);
 
         // Open Folder Button (Right) - Pinned Right
-        var openFolderBtn = UIComponents.button(Text.literal("Open Folder"), b -> {
-            Util.getOperatingSystem().open(currentDir.toFile());
+        var openFolderBtn = UIComponents.button(Component.literal("Open Folder"), b -> {
+            Util.getPlatform().openPath(currentDir);
         }).sizing(Sizing.fixed(90), Sizing.fixed(20));
         openFolderBtn.positioning(Positioning.relative(100, 20));
         bottomBar.child(openFolderBtn);
@@ -170,7 +161,7 @@ public class GalleryScreen extends BaseOwoScreen<FlowLayout> {
         else
             columns = 3;
 
-        button.setMessage(Text.literal(" " + columns + " Columns "));
+        button.setMessage(Component.literal(" " + columns + " Columns "));
     }
 
     private void refresh(FlowLayout root) {
@@ -197,9 +188,9 @@ public class GalleryScreen extends BaseOwoScreen<FlowLayout> {
             displayPath = currentDir.toString();
         }
 
-        pathLabel.text(Text.literal("Folder: " + displayPath));
+        pathLabel.text(Component.literal("Folder: " + displayPath));
         contentContainer.clearChildren();
-        contentContainer.child(UIComponents.label(Text.literal("Loading...")));
+        contentContainer.child(UIComponents.label(Component.literal("Loading...")));
 
         java.util.concurrent.CompletableFuture.supplyAsync(() -> {
             try (Stream<Path> stream = Files.list(currentDir)) {
@@ -230,7 +221,7 @@ public class GalleryScreen extends BaseOwoScreen<FlowLayout> {
             }
         }).thenAcceptAsync(result -> {
             if (result == null) {
-                contentContainer.child(UIComponents.label(Text.literal("Error loading files")));
+                contentContainer.child(UIComponents.label(Component.literal("Error loading files")));
                 return;
             }
 
@@ -309,7 +300,7 @@ public class GalleryScreen extends BaseOwoScreen<FlowLayout> {
             var scroll = UIContainers.verticalScroll(Sizing.fill(100), Sizing.fill(100), scrollContent);
             contentContainer.child(scroll);
 
-        }, MinecraftClient.getInstance()); // Execute on Main Thread
+        }, Minecraft.getInstance()); // Execute on Main Thread
     }
 
     private UIComponent createFolderUI(Path path, int width) {
@@ -325,12 +316,12 @@ public class GalleryScreen extends BaseOwoScreen<FlowLayout> {
             name = name.substring(0, maxLen - 3) + "...";
         }
 
-        return UIComponents.button(Text.literal("\uD83D\uDCC1 " + name), b -> {
+        return UIComponents.button(Component.literal("\uD83D\uDCC1 " + name), b -> {
             this.currentDir = path;
             refresh((FlowLayout) this.uiAdapter.rootComponent);
         }).sizing(Sizing.fixed(width), Sizing.fixed(20))
                 .margins(Insets.of(2))
-                .tooltip(Text.literal(path.getFileName().toString()));
+                .tooltip(Component.literal(path.getFileName().toString()));
     }
 
     private UIComponent createImageUI(java.util.List<Path> images, int index, int currentColumns, int w, int h) {
@@ -357,23 +348,27 @@ public class GalleryScreen extends BaseOwoScreen<FlowLayout> {
         if (fileName.length() > 20 && currentColumns > 4) {
             fileName = fileName.substring(0, 17) + "...";
         }
-        var label = UIComponents.label(Text.literal(fileName));
+        var label = UIComponents.label(Component.literal(fileName));
         label.horizontalTextAlignment(HorizontalAlignment.CENTER);
         label.sizing(Sizing.fill(100), Sizing.content());
         label.margins(Insets.top(2));
         content.child(label);
 
         // Click Layer (Invisible Button)
-        var button = UIComponents.button(Text.empty(), b -> {
-            MinecraftClient.getInstance()
+        var button = UIComponents.button(Component.empty(), b -> {
+            Minecraft.getInstance()
                     .setScreen(new SingleImageScreen(this.parent, images, index, this.currentDir));
         });
         button.sizing(Sizing.fill(100), Sizing.fill(100));
 
+        final boolean[] hovered = {false};
+        button.mouseEnter().subscribe(() -> hovered[0] = true);
+        button.mouseLeave().subscribe(() -> hovered[0] = false);
+
         // Transparent background
         button.renderer((context, btn, delta) -> {
-            // Draw outline if hovered (using captured coordinates for sync)
-            if (btn.isInBoundingBox(this.lastMouseX, this.lastMouseY)) {
+            // Draw outline if hovered
+            if (hovered[0]) {
                 int color = 0xFFFFFFFF;
                 context.fill(btn.x(), btn.y(), btn.x() + btn.width(), btn.y() + 1, color); // Top
                 context.fill(btn.x(), btn.y() + btn.height() - 1, btn.x() + btn.width(), btn.y() + btn.height(), color); // Bottom
@@ -383,10 +378,10 @@ public class GalleryScreen extends BaseOwoScreen<FlowLayout> {
         });
         button.cursorStyle(CursorStyle.HAND);
 
-        button.tooltip(Text.literal(path.getFileName().toString()));
+        button.tooltip(Component.literal(path.getFileName().toString()));
 
         // Stack Layer
-        int fontHeight = MinecraftClient.getInstance().textRenderer.fontHeight;
+        int fontHeight = Minecraft.getInstance().font.lineHeight;
         int calculatedHeight = h + fontHeight + 4;
 
         var stack = UIContainers.stack(Sizing.fixed(w), Sizing.fixed(calculatedHeight));
@@ -399,11 +394,11 @@ public class GalleryScreen extends BaseOwoScreen<FlowLayout> {
     }
 
     @Override
-    public void close() {
+    public void onClose() {
         if (parent != null) {
-            this.client.setScreen(parent);
+            this.minecraft.setScreen(parent);
         } else {
-            super.close();
+            super.onClose();
         }
     }
 

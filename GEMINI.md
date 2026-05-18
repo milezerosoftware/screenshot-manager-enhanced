@@ -41,7 +41,7 @@ The following workflows are defined in `.gemini/commands`:
 
 ### Multi-Module Structure
 
-This project uses a "Universal Mod" architecture to support multiple Minecraft versions and loaders with minimal code duplication.
+This project uses the [Universal Mod Template](https://github.com/thebuildcraft/Universal-Mod-Template) architecture to support multiple Minecraft versions and loaders with minimal code duplication.
 
 * **`common/`**: Contains the core logic, data models, and mixins that are shared across all versions and loaders.
 * **`fabric/`**: A loader-specific module that applies the `fabric-loom` plugin and wraps the `common` source code.

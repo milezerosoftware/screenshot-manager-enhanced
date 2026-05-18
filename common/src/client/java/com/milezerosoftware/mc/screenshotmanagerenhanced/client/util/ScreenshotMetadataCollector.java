@@ -1,11 +1,11 @@
 package com.milezerosoftware.mc.screenshotmanagerenhanced.client.util;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.client.world.ClientWorld;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.SharedConstants;
-import net.minecraft.stat.Stats;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.stats.Stats;
+import net.minecraft.core.BlockPos;
 
 /**
  * Collects metadata from the current Minecraft game state for embedding into
@@ -44,30 +44,30 @@ public class ScreenshotMetadataCollector {
      * @return A populated {@link MetadataHandler.ScreenshotMetadata} instance
      */
     public static MetadataHandler.ScreenshotMetadata collect() {
-        MinecraftClient client = MinecraftClient.getInstance();
-        ClientPlayerEntity player = client.player;
-        ClientWorld world = client.world;
+        Minecraft client = Minecraft.getInstance();
+        LocalPlayer player = client.player;
+        ClientLevel world = client.level;
 
         // Fallbacks for edge cases (e.g., screenshot from menu)
         String worldName = WorldUtils.getWorldId();
 
         // Dimension - formatted as Pascal Case
         String dimension = world != null
-                ? toPascalCase(world.getRegistryKey().getValue().getPath())
+                ? toPascalCase(world.dimension().identifier().getPath())
                 : "Unknown";
 
         // Coordinates - formatted as "x: 12, y: 80, z: 30"
         String coordinates = formatCoordinates(player);
 
         // In-Game Days
-        double days = world != null ? world.getTimeOfDay() / 24000.0 : 0;
+        double days = world != null ? WorldUtils.getDayTime(world) / 24000.0 : 0;
         String daysPlayed = String.format("%.2f d", days);
 
         // Real-Time World Age (player's total play time in this world)
         int totalTicks = 0;
         if (player != null) {
             try {
-                totalTicks = player.getStatHandler().getStat(Stats.CUSTOM.getOrCreateStat(Stats.PLAY_TIME));
+                totalTicks = player.getStats().getValue(Stats.CUSTOM.get(Stats.PLAY_TIME));
             } catch (Exception ignored) {
             }
         }
@@ -79,10 +79,10 @@ public class ScreenshotMetadataCollector {
                 ? player.getName().getString()
                 : "Unknown";
         String difficulty = world != null
-                ? world.getDifficulty().getTranslatableName().getString()
+                ? world.getDifficulty().getDisplayName().getString()
                 : "Unknown";
-        String gameMode = client.interactionManager != null
-                ? client.interactionManager.getCurrentGameMode().asString()
+        String gameMode = client.gameMode != null
+                ? client.gameMode.getPlayerMode().getName()
                 : "Unknown";
         String minecraftVersion = getMinecraftVersionName();
 
@@ -90,7 +90,7 @@ public class ScreenshotMetadataCollector {
         String biome = "Unknown";
         if (world != null && player != null) {
             try {
-                String rawBiome = world.getBiome(player.getBlockPos()).getKey().get().getValue().getPath();
+                String rawBiome = world.getBiome(player.blockPosition()).unwrapKey().get().identifier().getPath();
                 biome = toPascalCase(rawBiome);
             } catch (Exception ignored) {
             }
@@ -115,11 +115,11 @@ public class ScreenshotMetadataCollector {
      * @param player The player entity, or null if unavailable
      * @return Formatted coordinates string (e.g., "x: 70, y: 87, z: 159")
      */
-    private static String formatCoordinates(ClientPlayerEntity player) {
+    private static String formatCoordinates(LocalPlayer player) {
         if (player == null) {
             return "x: 0, y: 0, z: 0";
         }
-        BlockPos pos = player.getBlockPos();
+        BlockPos pos = player.blockPosition();
         return String.format("x: %d, y: %d, z: %d", pos.getX(), pos.getY(), pos.getZ());
     }
 
@@ -183,7 +183,7 @@ public class ScreenshotMetadataCollector {
      */
     private static String getMinecraftVersionName() {
         try {
-            Object gameVersion = SharedConstants.getGameVersion();
+            Object gameVersion = SharedConstants.getCurrentVersion();
 
             // Try name() first (1.21.8+)
             try {

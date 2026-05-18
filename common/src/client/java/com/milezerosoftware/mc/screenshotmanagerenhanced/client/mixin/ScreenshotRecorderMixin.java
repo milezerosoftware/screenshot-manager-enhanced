@@ -4,7 +4,7 @@ import com.milezerosoftware.mc.screenshotmanagerenhanced.client.util.ScreenshotP
 import com.milezerosoftware.mc.screenshotmanagerenhanced.client.util.WorldUtils;
 import com.milezerosoftware.mc.screenshotmanagerenhanced.config.ConfigManager;
 import com.milezerosoftware.mc.screenshotmanagerenhanced.config.ModConfig;
-import net.minecraft.client.util.ScreenshotRecorder;
+import net.minecraft.client.Screenshot;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -15,7 +15,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 /**
- * Mixin for {@link ScreenshotRecorder} that intercepts screenshot file path
+ * Mixin for {@link Screenshot} that intercepts screenshot file path
  * generation.
  * 
  * <p>
@@ -27,11 +27,11 @@ import java.util.Date;
  * </ul>
  * 
  * <p>
- * The mixin intercepts the {@code getScreenshotFilename} method to redirect
+ * The mixin intercepts the {@code getFile} method to redirect
  * screenshots to organized subdirectories and optionally embed metadata.
  * </p>
  */
-@Mixin(ScreenshotRecorder.class)
+@Mixin(Screenshot.class)
 public class ScreenshotRecorderMixin {
 
     private static final int FILE_POLL_INTERVAL_MS = 100;
@@ -43,7 +43,7 @@ public class ScreenshotRecorderMixin {
      * metadata embedding.
      * 
      * <p>
-     * This injection runs at the HEAD of {@code getScreenshotFilename}, cancelling
+     * This injection runs at the HEAD of {@code getFile}, cancelling
      * the original method and providing a custom file path based on the current
      * world or server context.
      * </p>
@@ -60,8 +60,8 @@ public class ScreenshotRecorderMixin {
      * @param gameDir The game directory (usually .minecraft)
      * @param cir     Callback info for returning the custom file path
      */
-    @Inject(method = "getScreenshotFilename(Ljava/io/File;)Ljava/io/File;", at = @At("HEAD"), cancellable = true)
-    private static void onGetScreenshotFilename(File gameDir, CallbackInfoReturnable<File> cir) {
+    @Inject(method = "getFile(Ljava/io/File;)Ljava/io/File;", at = @At("HEAD"), cancellable = true)
+    private static void onGetFile(File gameDir, CallbackInfoReturnable<File> cir) {
         // Get the sanitized world/server name
         String rawWorldId = WorldUtils.getWorldId();
         String safeWorldId = WorldUtils.sanitize(rawWorldId);

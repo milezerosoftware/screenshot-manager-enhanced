@@ -12,10 +12,10 @@ import me.shedaniel.clothconfig2.api.ConfigEntryBuilder;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.ConfirmScreen;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.text.Text;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.ConfirmScreen;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
 
 import java.nio.file.Path;
 import java.util.Collections;
@@ -40,24 +40,24 @@ public class ModMenuIntegration implements ModMenuApi {
                                                                 currentConfig.customPathConfig.hasAcknowledgedWarning = true;
                                                                 ConfigManager.save();
                                                                 // Continue to config screen
-                                                                MinecraftClient.getInstance()
+                                                                Minecraft.getInstance()
                                                                                 .setScreen(createConfigScreen(parent,
                                                                                                 currentConfig));
                                                         } else {
                                                                 currentConfig.customSavePathEnabled = false;
                                                                 ConfigManager.save();
                                                                 // Continue to config screen with it disabled
-                                                                MinecraftClient.getInstance()
+                                                                Minecraft.getInstance()
                                                                                 .setScreen(createConfigScreen(parent,
                                                                                                 currentConfig));
                                                         }
                                                 },
-                                                Text.literal("§eCustom Save Path Warning§r"),
-                                                Text.literal("§cIMPORTANT:§r The custom save path feature is enabled in config, but the warning has not been acknowledged.\n\n"
+                                                Component.literal("§eCustom Save Path Warning§r"),
+                                                Component.literal("§cIMPORTANT:§r The custom save path feature is enabled in config, but the warning has not been acknowledged.\n\n"
                                                                 + "You are responsible for managing world name conflicts to avoid overwriting screenshots.\n\n"
                                                                 + "§7Do you want to keep this feature enabled?§r"),
-                                                Text.literal("§aKeep Enabled§r"),
-                                                Text.literal("§cDisable Feature§r"));
+                                                Component.literal("§aKeep Enabled§r"),
+                                                Component.literal("§cDisable Feature§r"));
                         }
 
                         return createConfigScreen(parent, currentConfig);
@@ -71,7 +71,7 @@ public class ModMenuIntegration implements ModMenuApi {
 
                 ConfigBuilder builder = ConfigBuilder.create()
                                 .setParentScreen(parent)
-                                .setTitle(Text.literal("Screenshot Manager Enhanced Settings"))
+                                .setTitle(Component.literal("Screenshot Manager Enhanced Settings"))
                                 // Centralized Warning Logic on Save
                                 .setSavingRunnable(() -> {
                                         // Update Advanced Settings state
@@ -97,29 +97,29 @@ public class ModMenuIntegration implements ModMenuApi {
                                 .setDoesConfirmSave(false);
 
                 ConfigEntryBuilder entryBuilder = builder.entryBuilder();
-                ConfigCategory generalCategory = builder.getOrCreateCategory(Text.literal("General"));
+                ConfigCategory generalCategory = builder.getOrCreateCategory(Component.literal("General"));
 
                 // --- Grouping Mode ---
                 generalCategory.addEntry(entryBuilder.startEnumSelector(
-                                Text.literal("§6Grouping Mode§r"),
+                                Component.literal("§6Grouping Mode§r"),
                                 GroupingMode.class,
                                 currentConfig.groupingMode)
                                 .setDefaultValue(GroupingMode.WORLD)
-                                .setTooltip(Text.literal("Select how screenshots are grouped locally"))
+                                .setTooltip(Component.literal("Select how screenshots are grouped locally"))
                                 .setEnumNameProvider(enumValue -> {
                                         if (enumValue instanceof GroupingMode mode) {
-                                                return Text.literal(mode.toString());
+                                                return Component.literal(mode.toString());
                                         }
-                                        return Text.literal(enumValue.name());
+                                        return Component.literal(enumValue.name());
                                 })
                                 .setSaveConsumer(newValue -> currentConfig.groupingMode = newValue)
                                 .build());
 
                 // Grouping Mode Guide
                 generalCategory.addEntry(entryBuilder.startSubCategory(
-                                Text.literal("Grouping Mode Guide"),
+                                Component.literal("Grouping Mode Guide"),
                                 Collections.singletonList(
-                                                entryBuilder.startTextDescription(Text.literal(
+                                                entryBuilder.startTextDescription(Component.literal(
                                                                 "§eGrouping Modes§r organize screenshots into folders:\n\n"
                                                                                 + "§bWORLD§f (World) - Groups by world/server name\n"
                                                                                 + "  §7Example: screenshots/My_Survival_World/§r\n\n"
@@ -137,10 +137,10 @@ public class ModMenuIntegration implements ModMenuApi {
                                                                                 + "  §7Example: screenshots/§r"))
                                                                 .build()))
                                 .setExpanded(false)
-                                .setTooltip(Text.literal("Click to view detailed grouping mode information"))
+                                .setTooltip(Component.literal("Click to view detailed grouping mode information"))
                                 .build());
 
-                generalCategory.addEntry(entryBuilder.startTextDescription(Text.literal(" ")).build());
+                generalCategory.addEntry(entryBuilder.startTextDescription(Component.literal(" ")).build());
 
                 // --- Advanced Features ---
                 // Construct list explicitly to avoid generic type inference issues with
@@ -149,37 +149,37 @@ public class ModMenuIntegration implements ModMenuApi {
 
                 // Metadata Header
                 advancedEntries.add(entryBuilder.startTextDescription(
-                                Text.literal("Enable the following to add §lMinecraft metadata§r to screenshots."))
+                                Component.literal("Enable the following to add §lMinecraft metadata§r to screenshots."))
                                 .build());
 
                 // Metadata Toggle
                 advancedEntries.add(entryBuilder.startBooleanToggle(
-                                Text.literal("§6Toggle Metadata§r"),
+                                Component.literal("§6Toggle Metadata§r"),
                                 currentConfig.embedMetadata)
                                 .setDefaultValue(false)
-                                .setTooltip(Text.literal(
+                                .setTooltip(Component.literal(
                                                 "Enable to embed metadata (World, Coords, etc.) into PNG files"))
                                 .setSaveConsumer(
                                                 newValue -> currentConfig.embedMetadata = newValue)
-                                .setYesNoTextSupplier(bool -> Text
+                                .setYesNoTextSupplier(bool -> Component
                                                 .literal(bool ? "§aYes§r" : "§cNo§r"))
                                 .build());
 
-                advancedEntries.add(entryBuilder.startTextDescription(Text.literal(" ")).build());
+                advancedEntries.add(entryBuilder.startTextDescription(Component.literal(" ")).build());
 
                 // Custom Path Header
                 advancedEntries.add(entryBuilder.startTextDescription(
-                                Text.literal("Enable the following to set a §lCustom Screenshot§r save location."))
-                                .setTooltip(Text.literal(
+                                Component.literal("Enable the following to set a §lCustom Screenshot§r save location."))
+                                .setTooltip(Component.literal(
                                                 "Save screenshots to a custom directory instead of the default location."))
                                 .build());
 
                 // Enable Custom Path
                 advancedEntries.add(entryBuilder.startBooleanToggle(
-                                Text.literal("§6Enable Custom Location§r"),
+                                Component.literal("§6Enable Custom Location§r"),
                                 currentConfig.customSavePathEnabled)
                                 .setDefaultValue(false)
-                                .setTooltip(Text.literal(
+                                .setTooltip(Component.literal(
                                                 "Enabling requires Warning Acknowledgment."))
                                 .setSaveConsumer(newValue -> {
                                         // Just update value, logic is in SavingRunnable
@@ -193,7 +193,7 @@ public class ModMenuIntegration implements ModMenuApi {
                                                                 .toString();
                                         }
                                 })
-                                .setYesNoTextSupplier(bool -> Text
+                                .setYesNoTextSupplier(bool -> Component
                                                 .literal(bool ? "§aYes§r" : "§cNo§r"))
                                 .build());
 
@@ -202,14 +202,14 @@ public class ModMenuIntegration implements ModMenuApi {
 
                 // Custom Path Field
                 advancedEntries.add(entryBuilder.startStrField(
-                                Text.literal("§6Screenshot Save Location§r"),
+                                Component.literal("§6Screenshot Save Location§r"),
                                 currentConfig.customPathConfig.customPath.isEmpty()
                                                 ? defaultScreenshotsPath.toAbsolutePath()
                                                                 .toString()
                                                 : currentConfig.customPathConfig.customPath)
                                 .setDefaultValue(defaultScreenshotsPath.toAbsolutePath()
                                                 .toString())
-                                .setTooltip(Text.literal(
+                                .setTooltip(Component.literal(
                                                 "Copy & Paste absolute path in to field\nPath must be absolute when setting a custom location.\n\nCurrent Path: "
                                                                 + (currentConfig.customPathConfig.customPath
                                                                                 .isEmpty()
@@ -223,13 +223,13 @@ public class ModMenuIntegration implements ModMenuApi {
 
                                         // Update dynamic status text
                                         if (!result.isValid) {
-                                                statusEntry.setText(Text.literal("§c" + result.errorMessage + "§r"));
+                                                statusEntry.setText(Component.literal("§c" + result.errorMessage + "§r"));
                                                 // Return error to block saving (this re-enables the overlay, which is
                                                 // necessary for safety)
                                                 String errorString = "CustomPath Error";
-                                                return java.util.Optional.of(Text.literal(errorString));
+                                                return java.util.Optional.of(Component.literal(errorString));
                                         } else {
-                                                statusEntry.setText(Text.empty());
+                                                statusEntry.setText(Component.empty());
                                                 return java.util.Optional.empty();
                                         }
                                 })
@@ -246,10 +246,10 @@ public class ModMenuIntegration implements ModMenuApi {
                 advancedEntries.add(statusEntry);
 
                 generalCategory.addEntry(entryBuilder.startSubCategory(
-                                Text.literal("§3Advanced Features§r"),
+                                Component.literal("§3Advanced Features§r"),
                                 advancedEntries)
                                 .setExpanded(currentConfig.advancedSettings)
-                                .setTooltip(Text.literal("Click to view Advanced Features"))
+                                .setTooltip(Component.literal("Click to view Advanced Features"))
                                 .build());
 
                 return builder.build();
@@ -257,28 +257,28 @@ public class ModMenuIntegration implements ModMenuApi {
 
         // Custom Entry for dynamic text rendering
         private static class DynamicTextEntry extends me.shedaniel.clothconfig2.api.AbstractConfigListEntry<Object> {
-                private Text text = Text.empty();
+                private Component text = Component.empty();
 
                 public DynamicTextEntry() {
-                        super(Text.empty(), false);
+                        super(Component.empty(), false);
                 }
 
-                public void setText(Text text) {
+                public void setText(Component text) {
                         this.text = text;
                 }
 
                 @Override
-                public void render(net.minecraft.client.gui.DrawContext context, int index, int y, int x,
+                public void extractRenderState(net.minecraft.client.gui.GuiGraphicsExtractor context, int index, int y, int x,
                                 int entryWidth,
                                 int entryHeight, int mouseX, int mouseY, boolean hovered, float tickDelta) {
-                        if (!text.equals(Text.empty())) {
-                                context.drawText(MinecraftClient.getInstance().textRenderer, text, x + 10, y + 6,
+                        if (!text.equals(Component.empty())) {
+                                context.text(Minecraft.getInstance().font, text, x + 10, y + 6,
                                                 0xFFFFFF, false);
                         }
                 }
 
                 @Override
-                public List<? extends net.minecraft.client.gui.Element> children() {
+                public List<? extends net.minecraft.client.gui.components.events.GuiEventListener> children() {
                         return Collections.emptyList();
                 }
 
@@ -302,18 +302,18 @@ public class ModMenuIntegration implements ModMenuApi {
 
                 @SuppressWarnings("unchecked")
                 @Override
-                public List<? extends net.minecraft.client.gui.Selectable> narratables() {
+                public List<? extends net.minecraft.client.gui.narration.NarratableEntry> narratables() {
                         return (List) Collections.emptyList();
                 }
 
                 @Override
-                public Text getFieldName() {
-                        return Text.empty();
+                public Component getFieldName() {
+                        return Component.empty();
                 }
         }
 
         private void showCustomPathWarningDialog(ModConfig config, Screen parent) {
-                MinecraftClient client = MinecraftClient.getInstance();
+                Minecraft client = Minecraft.getInstance();
                 if (client == null) {
                         return;
                 }
@@ -331,13 +331,13 @@ public class ModMenuIntegration implements ModMenuApi {
                                         // Return to parent
                                         client.setScreen(parent);
                                 },
-                                Text.literal("§eCustom Save Path Warning§r"),
-                                Text.literal("§cIMPORTANT:§r When using a custom save path, you are responsible for managing "
+                                Component.literal("§eCustom Save Path Warning§r"),
+                                Component.literal("§cIMPORTANT:§r When using a custom save path, you are responsible for managing "
                                                 + "world name conflicts. If multiple Minecraft instances save to the same directory "
                                                 + "with the same world names, screenshots may be overwritten.\n\n"
                                                 + "§7Do you want to enable this feature?§r"),
-                                Text.literal("§aI Understand§r"),
-                                Text.literal("§cCancel§r"));
+                                Component.literal("§aI Understand§r"),
+                                Component.literal("§cCancel§r"));
 
                 // Schedule to avoid conflict with Cloth Config closing
                 // We use a small delay because client.execute() runs immediately if on the main

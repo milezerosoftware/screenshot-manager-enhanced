@@ -5,13 +5,25 @@ All notable changes to Screenshot Manager Enhanced will be documented in this fi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [2.0.0] - 2026-05-18
 
 ### Added
 
+- **Minecraft 26.1.2 Support**: Fully functional client compilation and packaging under the modern Minecraft `26.1.2` build classpath using Java 25.
+- **Java 25 Compilation Tooling**: Upgraded version configurations and matrix resolution workflows to seamlessly support newer target environments.
+
 ### Changed
 
-### Fixed
+- **Mojang Mappings Migration**: Transitioned the primary compilation mapping baseline from old Yarn mappings to standard official Mojang mappings for all active releases (`1.21.11` and `26.1.2`), ensuring high compatibility with vanilla APIs.
+- **Reactive UI Modernization**: Rewrote visual hover effects in the screenshot gallery UI using **owo-lib's reactive mouse-event framework** (`mouseEnter`/`mouseLeave` subscriptions), completely abstracting target-specific rendering contexts from screen definitions.
+- **Client Code Consolidation**: Unified complex GUI controllers (`GalleryScreen`, `SingleImageScreen`, `ScreenshotMetadataCollector`) back into a single shared source set in the `common` subproject, deleting over 800 lines of duplicate client-side classes.
+- **Consistent Directory Semantics**: Renamed the historical `java-modern` directory to `java-21` to match properties definitions and reflect its targeted Minecraft 1.21 baseline.
+
+### Removed
+
+- **Legacy Client Classes**: Deleted the now-unused `java-8`, `java-17`, and legacy `fabric` client source sets (20+ files)
+- **Obsolete Build Configurations**: Removed `java8.gradle.kts` and related legacy build logic
+- **Build Matrix Redundancy**: Simplified the CI/CD matrix to use a single `versions.properties`-driven configuration
 
 ---
 
