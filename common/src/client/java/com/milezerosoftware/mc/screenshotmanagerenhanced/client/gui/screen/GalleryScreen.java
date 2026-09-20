@@ -2,6 +2,7 @@ package com.milezerosoftware.mc.screenshotmanagerenhanced.client.gui.screen;
 
 import com.milezerosoftware.mc.screenshotmanagerenhanced.client.render.ScreenshotTextureManager;
 import com.milezerosoftware.mc.screenshotmanagerenhanced.client.util.ScreenshotPathGenerator;
+import com.milezerosoftware.mc.screenshotmanagerenhanced.client.util.ScreenUtils;
 import com.milezerosoftware.mc.screenshotmanagerenhanced.client.util.WorldUtils;
 import com.milezerosoftware.mc.screenshotmanagerenhanced.config.ConfigManager;
 import com.milezerosoftware.mc.screenshotmanagerenhanced.config.ModConfig;
@@ -356,8 +357,7 @@ public class GalleryScreen extends BaseOwoScreen<FlowLayout> {
 
         // Click Layer (Invisible Button)
         var button = UIComponents.button(Component.empty(), b -> {
-            Minecraft.getInstance()
-                    .setScreen(new SingleImageScreen(this.parent, images, index, this.currentDir));
+            ScreenUtils.setScreen(new SingleImageScreen(this.parent, images, index, this.currentDir));
         });
         button.sizing(Sizing.fill(100), Sizing.fill(100));
 
@@ -396,7 +396,7 @@ public class GalleryScreen extends BaseOwoScreen<FlowLayout> {
     @Override
     public void onClose() {
         if (parent != null) {
-            this.minecraft.setScreen(parent);
+            ScreenUtils.setScreen(this.minecraft, parent);
         } else {
             super.onClose();
         }
