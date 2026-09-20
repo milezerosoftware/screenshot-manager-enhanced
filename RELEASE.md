@@ -189,10 +189,30 @@ Comment out the platform section in `release.yml`:
 
 ---
 
+## Adding a New Minecraft Version
+
+Before creating a release that includes a new Minecraft version (e.g., `26.2`):
+
+1. **Create Properties File**: Add `versionProperties/<mc_ver>.properties` defining dependencies (`fabric_version`, `loader_version`, `cloth_config_version`, `modmenu_version`, `owo_version`, `java_version`, and `ui_version`).
+2. **Version Bridges**: If the new MC version has API changes, provide the appropriate version-specific implementations (under `common/src/client/java-<ui_version>/`).
+3. **Verify Locally**:
+   ```bash
+   # Run tests for the version
+   ./gradlew :common:test -Pmc_ver=<mc_ver> --no-daemon
+
+   # Build fabric artifact
+   ./gradlew :fabric:build -Pmc_ver=<mc_ver> --no-daemon
+
+   # Verify all configured versions build together
+   ./gradlew buildAllFabric --no-daemon
+   ```
+
+---
+
 ## FAQ
 
-**Q: Do I need to do anything per Minecraft version?**  
-No, the workflow handles all versions automatically from a single tag.
+**Q: Do I need to manually update release workflows when adding a Minecraft version?**  
+No. The release and build workflows automatically scan `versionProperties/*.properties` dynamically to discover all supported versions (versions `26.x` and `>= 1.21.11` without `build_disabled=true`).
 
 **Q: Can I test without publishing?**  
 Create a pre-release tag like `v1.0.0-rc1`. It will still publish, but marked as pre-release.
@@ -200,5 +220,5 @@ Create a pre-release tag like `v1.0.0-rc1`. It will still publish, but marked as
 **Q: What if I forget to update the changelog?**  
 The upload works but shows "No changelog provided" on platforms.
 
-**Q: How do I add more Minecraft versions?**  
-Add to the `matrix.mc_ver` array in `release.yml`.
+**Q: How do I disable a version from automated builds or releases?**  
+Add `build_disabled=true` to the respective `versionProperties/<mc_ver>.properties` file.

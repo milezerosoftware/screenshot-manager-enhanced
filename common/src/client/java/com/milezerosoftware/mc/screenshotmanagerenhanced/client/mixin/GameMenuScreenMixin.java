@@ -1,7 +1,7 @@
 package com.milezerosoftware.mc.screenshotmanagerenhanced.client.mixin;
 
 import com.milezerosoftware.mc.screenshotmanagerenhanced.client.gui.screen.GalleryScreen;
-import net.minecraft.client.Minecraft;
+import com.milezerosoftware.mc.screenshotmanagerenhanced.client.util.ScreenUtils;
 import net.minecraft.client.gui.screens.PauseScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.components.Button;
@@ -20,7 +20,7 @@ public abstract class GameMenuScreenMixin extends Screen {
     @Inject(at = @At("TAIL"), method = "init")
     private void addGalleryButton(CallbackInfo ci) {
         this.addRenderableWidget(Button.builder(Component.literal("Gallery 📸"), button -> {
-            Minecraft.getInstance().setScreen(new GalleryScreen(this));
+            ScreenUtils.setScreen(new GalleryScreen(this));
         }).bounds(this.width / 2 + 104, this.height / 4 + 96 - 16, 70, 20).build());
     }
 }

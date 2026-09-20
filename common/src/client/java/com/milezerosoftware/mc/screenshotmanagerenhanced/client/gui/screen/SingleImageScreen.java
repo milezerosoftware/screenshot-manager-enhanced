@@ -2,6 +2,7 @@ package com.milezerosoftware.mc.screenshotmanagerenhanced.client.gui.screen;
 
 import com.milezerosoftware.mc.screenshotmanagerenhanced.client.render.ScreenshotTextureManager;
 import com.milezerosoftware.mc.screenshotmanagerenhanced.client.util.ClipboardUtil;
+import com.milezerosoftware.mc.screenshotmanagerenhanced.client.util.ScreenUtils;
 import io.wispforest.owo.ui.base.BaseOwoScreen;
 import io.wispforest.owo.ui.component.*;
 import io.wispforest.owo.ui.container.*;
@@ -106,7 +107,7 @@ public class SingleImageScreen extends BaseOwoScreen<FlowLayout> {
 
         // Back
         leftGroup.child(UIComponents.button(Component.literal("Back"), b -> {
-            Minecraft.getInstance().setScreen(new GalleryScreen(this.parent, this.galleryDir));
+            ScreenUtils.setScreen(new GalleryScreen(this.parent, this.galleryDir));
         }).sizing(Sizing.fixed(actionBtnWidth), Sizing.fixed(btnHeight)));
 
         // Copy
@@ -114,7 +115,7 @@ public class SingleImageScreen extends BaseOwoScreen<FlowLayout> {
             boolean success = ClipboardUtil.copyImageToClipboard(images.get(currentIndex));
             if (success) {
                 SystemToast.add(
-                        Minecraft.getInstance().getToastManager(),
+                        ScreenUtils.getToastManager(),
                         SystemToast.SystemToastId.PERIODIC_NOTIFICATION,
                         Component.literal("Copied!"),
                         Component.literal("Image copied to clipboard"));
@@ -208,7 +209,7 @@ public class SingleImageScreen extends BaseOwoScreen<FlowLayout> {
         } catch (IOException e) {
             e.printStackTrace();
             SystemToast.add(
-                    Minecraft.getInstance().getToastManager(),
+                    ScreenUtils.getToastManager(),
                     SystemToast.SystemToastId.PERIODIC_NOTIFICATION,
                     Component.literal("Error"),
                     Component.literal("Failed to delete file"));
@@ -218,7 +219,7 @@ public class SingleImageScreen extends BaseOwoScreen<FlowLayout> {
     @Override
     public void onClose() {
         if (parent != null) {
-            this.minecraft.setScreen(new GalleryScreen(this.parent, this.galleryDir));
+            ScreenUtils.setScreen(this.minecraft, new GalleryScreen(this.parent, this.galleryDir));
         } else {
             super.onClose();
         }

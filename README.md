@@ -99,55 +99,50 @@ We welcome contributions!
 
 1. **Fork the Repository**
 2. **Clone**: `git clone https://github.com/milezerosoftware/screenshot-manager-enhanced.git`
-3. **Make Changes**: Core logic resides in `common/`. Loader-specific code is in `fabric/` (and future modules).
-4. **Test**: Run `./gradlew :fabric:runClient -Pmc_ver=1.21.10` to test locally.
-5. **Pull Request**: Submit a PR with a clear description of your changes.
+3. **Make Changes**: Core logic resides in `common/`. Loader-specific code is in `fabric/`.
+4. **Test**: Run unit tests with `./gradlew :common:test -Pmc_ver=26.2` or run client locally with `./gradlew :fabric:runClient -Pmc_ver=26.2`.
+5. **Pull Request**: Submit a PR targeting `main` with a clear description of your changes.
 
 Please report any bugs or feature requests on the [Issue Tracker](https://github.com/milezerosoftware/screenshot-manager-enhanced/issues).
 
 ### 🛠️ Building from Source
 
-This project uses a multi-module Gradle structure to support multiple Minecraft versions.
+This project uses a multi-module Gradle structure to support multiple Minecraft versions dynamically.
 
 #### Build All (Recommended)
 
-Build all supported versions for all loaders in one command:
-
-```bash
-./gradlew buildAllAll
-```
-
-#### Build by Loader
-
-Build all supported Minecraft versions for a specific loader:
+Build all configured Minecraft versions for Fabric in one command:
 
 ```bash
 ./gradlew buildAllFabric
 ```
 
-> [!TIP]
-> You can discover all available loader and version tasks by running:
-> `./gradlew tasks --group "build all"`
+#### Run Unit Tests
 
-#### Planned Loader Support
-
-Tasks for these are not yet implemented but are on the roadmap:
-
-* **NeoForge**: `buildAllNeoForge`
-* **Forge**: `buildAllForge`
-* **Quilt**: `buildAllQuilt`
-
-### Build Specific Version
-
-To build or run for a specific Minecraft version, use the `-Pmc_ver` property:
+Run unit tests across common components:
 
 ```bash
-# Build Fabric for 1.21.10
-./gradlew :fabric:build -Pmc_ver=1.21.10
+# Run tests for specific MC version
+./gradlew :common:test -Pmc_ver=26.2
 
+# Or against Java 21 baseline target
+./gradlew :common:test -Pmc_ver=1.21.11
+```
+
+#### Build Specific Version
+
+To build or run for a specific Minecraft version, pass the `-Pmc_ver` property:
+
+```bash
+# Build Fabric for MC 26.2
+./gradlew :fabric:build -Pmc_ver=26.2
+
+# Run client for testing in MC 26.2
+./gradlew :fabric:runClient -Pmc_ver=26.2
+```
 
 > [!NOTE]
-> Supported Minecraft versions are defined in `versionProperties/`. Currently supported: `1.21.11` thru `1.20.5`
+> Supported Minecraft versions are defined dynamically by property files in `versionProperties/` (e.g. `1.21.11`, `26.1.2`, `26.2`). The build system automatically detects and builds active versions.
 
 ## 🚀 Release Process
 
