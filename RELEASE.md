@@ -3,99 +3,82 @@
 ## TL;DR Quick Reference
 
 ``` text
-┌─────────────────────────────────────────────────────────┐
-│                    RELEASE WORKFLOW                     │
-├─────────────────────────────────────────────────────────┤
-│  1. Update CHANGELOG.md with release notes              │
-│  2. Update mod_version in gradle.properties             │
-│  3. git checkout -b release/X.Y.Z                       │
-│  4. git add . && git commit -m "chore: release vX.Y.Z"  │
-│  5. Open a PR and merge the PR                          │
-│  6. git checkout main && git pull                       │
-│  7. git tag vX.Y.Z                                      │
-│  8. git push origin vX.Y.Z                              │
-│  9. ☕ Wait ~5-10 min for builds                         │
-│  10. Verify uploads on Modrinth + CurseForge            │
-│  11. Publish GitHub release draft (optional)            │
-└─────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│                    TWO-PHASE RELEASE WORKFLOW                │
+├──────────────────────────────────────────────────────────────┤
+│  PHASE 1: PREPARATION (on feature/main)                      │
+│  1. ./gradlew prepareRelease                                 │
+│     - Auto-detects version bump (SemVer)                     │
+│     - Synthesizes changelog from git commits                 │
+│     - Creates release/vX.Y.Z branch & commits version        │
+│     - Pushes and opens GitHub Pull Request targeting main    │
+│  2. Review and merge the Pull Request on GitHub              │
+│                                                              │
+│  PHASE 2: PUBLISHING (on main after merge)                   │
+│  3. git checkout main && git pull                            │
+│  4. ./gradlew publishRelease                                 │
+│     - Builds release artifacts for all MC versions           │
+│     - Tags git release and pushes tag                        │
+│     - Creates GitHub Release in DRAFT with JARs attached     │
+│     - Uploads all artifacts to Modrinth via API              │
+│     - Promotes GitHub Release from Draft to Published        │
+│                                                              │
+│  SAFE TESTING:                                               │
+│  Run any step with -PdryRun=true to simulate safely!         │
+└──────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
 ## Step-by-Step Release Instructions
 
-### Step 1: Update CHANGELOG.md
+### Phase 1: Prepare Release (`prepareRelease`)
 
-Add a new section for your release following the [Keep a Changelog](https://keepachangelog.com/) format:
-
-```markdown
-## [X.Y.Z] - YYYY-MM-DD
-
-### Added
-- New feature description
-
-### Changed
-- Changed behavior description
-
-### Fixed
-- Bug fix description
-```
-
-### Step 2: Update Version
-
-Edit `gradle.properties`:
-
-```properties
-mod_version=X.Y.Z
-```
-
-### Step 3: Commit and Tag
+Run the guided preparation task:
 
 ```bash
-# Checkout new branch
-git checkout -b release/X.Y.Z
+# Dry-run first if you want to inspect without creating branches or PRs:
+./gradlew prepareRelease -PdryRun=true
 
-# Stage changes
-git add gradle.properties CHANGELOG.md
+# Real execution:
+./gradlew prepareRelease
+```
 
-# Commit with release message
-git commit -m "chore: release vX.Y.Z"
+The task will interactively:
+1. Detect unreleased commits since the last release tag.
+2. Propose the next semantic version (`Major`, `Minor`, or `Patch`) with manual override option.
+3. Automatically categorize commits into Keep a Changelog format (`### Added`, `### Changed`, `### Fixed`, `### Internal`).
+4. Checkout a `release/vX.Y.Z` branch, update `gradle.properties` and `CHANGELOG.md`, commit, and push.
+5. Open a GitHub Pull Request to `main`.
 
-# Push to remote
-git push origin release/X.Y.Z
+### Merging the PR
 
-# Open a PR to merge release/X.Y.Z into main
+Review the Pull Request on GitHub and merge it into `main`. **No commits are made directly to `main`**, keeping branch protections completely intact.
 
-# Checkout main & pull changes
+### Phase 2: Publish Release (`publishRelease`)
+
+Once the PR is merged:
+
+```bash
+# 1. Switch to main and pull the merged changes
 git checkout main
 git pull
 
-# Create annotated tag
-git tag vX.Y.Z
+# 2. (Optional) Run in dry-run mode to verify all gates without publishing
+./gradlew publishRelease -PdryRun=true
 
-# Push tag to remote
-git push origin vX.Y.Z
+# 3. Run the live release
+./gradlew publishRelease
 ```
 
-### Step 4: Wait for Automation
-
-The GitHub Action will automatically:
-
-1. ✅ Build all supported Minecraft versions (7+ JARs)
-2. ✅ Upload each JAR to **Modrinth**
-3. ✅ Upload each JAR to **CurseForge** *(when configured)*
-4. ✅ Create a **GitHub Release** (draft)
-5. ✅ Attach your changelog to all platforms
-
-**Estimated time**: 5-10 minutes
-
-### Step 5: Verify
-
-Check uploads on:
-
-- [GitHub Actions](https://github.com/milezerosoftware/screenshot-manager-enhanced/actions) — workflow status
-- [Modrinth Versions](https://modrinth.com/mod/screenshot-manager-enhanced/versions) — new versions appear
-- CurseForge Files page *(when configured)*
+The task will:
+1. Verify working tree is clean and on `main`.
+2. Extract the approved changelog notes for this version.
+3. Build release JARs for all configured Minecraft versions via `./gradlew buildAllFabric`.
+4. Create the git tag and push it to origin.
+5. Create a **GitHub Release in DRAFT mode** and attach all generated JARs.
+6. Publish all JARs directly to **Modrinth** using their v2 API.
+7. Flip the GitHub Release from **Draft** to **Published**.
 
 ---
 

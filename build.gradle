@@ -196,6 +196,7 @@ def getVersionProperties() {
 }
 
 def versionList = getVersionProperties()
+project.ext.versionList = versionList
 
 // Individual Fabric Build Tasks per version
 versionList.each { mcVersion ->
@@ -219,3 +220,6 @@ tasks.register("buildAllAll") {
     description = "Build all loaders for all configured Minecraft versions"
     dependsOn "buildAllFabric"
 }
+
+apply from: 'gradle/release.gradle'
+
