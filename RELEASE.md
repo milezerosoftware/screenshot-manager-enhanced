@@ -115,60 +115,33 @@ Each platform receives consistently named versions:
 
 ---
 
-## One-Time Setup
+## Configuration & Secrets
 
-### GitHub Secrets
-
-Before your first release, add these secrets to your repository:
-
-1. Go to **Settings → Secrets and variables → Actions**
-2. Add the following secrets:
-
-| Secret Name | Where to Get |
-|-------------|--------------|
-| `MODRINTH_TOKEN` | [modrinth.com/settings/account](https://modrinth.com/settings/account) — Create token with `CREATE_VERSION` scope |
-| `CURSEFORGE_TOKEN` | [curseforge.com/account/api-tokens](https://curseforge.com/account/api-tokens) |
-
-### CurseForge Project ID
-
-When ready to publish to CurseForge:
-
-1. Get your numeric project ID from your CurseForge project URL
-2. Edit `.github/workflows/release.yml`
-3. Uncomment the CurseForge section and add your ID:
-
-```yaml
-curseforge-id: YOUR_PROJECT_ID
-curseforge-token: ${{ secrets.CURSEFORGE_TOKEN }}
-```
+### Modrinth Token
+The release task needs your Modrinth token to upload artifacts. You can provide it in one of two ways:
+1. Set the environment variable: `export MODRINTH_TOKEN="mrp_..."`
+2. Add it to your global `~/.gradle/gradle.properties`:
+   ```properties
+   modrinthToken=mrp_...
+   ```
+*(The task will also prompt you if it is not found and can save it to `~/.gradle/gradle.properties` automatically).*
 
 ---
 
 ## Troubleshooting
 
-### If a platform upload fails
-
-1. Check GitHub Actions logs for the specific error
-2. mc-publish has built-in retry logic (2 attempts, 10s delay)
-3. Re-run the failed job from the GitHub Actions UI
-4. Or create a patch release: `v1.2.1`
-
-### If you need to skip a platform
-
-Comment out the platform section in `release.yml`:
-
-```yaml
-# modrinth-id: screenshot-manager-enhanced
-# modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
-```
+### If Modrinth upload fails
+1. The task leaves the GitHub Release in **DRAFT** mode so nothing broken is visible to users.
+2. Check the error message in the console (e.g. invalid token, version already exists).
+3. If needed, you can delete the draft release from GitHub or re-run `./gradlew publishRelease` after fixing the issue.
 
 ### Common errors
 
 | Error | Solution |
 |-------|----------|
-| `Invalid token` | Regenerate token and update GitHub secret |
-| `Version already exists` | Bump version number in `gradle.properties` |
-| `Project not found` | Verify project ID/slug in workflow |
+| `Invalid token` | Verify or regenerate token at [modrinth.com/settings/account](https://modrinth.com/settings/account) |
+| `Version already exists` | Bump `mod_version` in `gradle.properties` via `prepareRelease` |
+| `Working tree is dirty` | Commit or stash any uncommitted changes before releasing |
 
 ---
 
