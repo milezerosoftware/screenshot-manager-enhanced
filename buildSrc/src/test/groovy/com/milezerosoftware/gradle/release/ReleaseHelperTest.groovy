@@ -76,4 +76,27 @@ class ReleaseHelperTest {
         assertTrue(section.contains("Feature 1"))
         assertFalse(section.contains("Feature 0"))
     }
+
+    @Test
+    void testGetPlayerFacingNotes() {
+        String fullChangelog = """## [2.1.0] - 2026-09-20
+
+### Added
+- Minecraft 26.2 Support
+
+### Changed
+- Improved gallery performance
+
+### Internal & Development
+- ScreenUtils abstraction
+- Release automation tooling
+"""
+        String playerNotes = ReleaseHelper.getPlayerFacingNotes(fullChangelog)
+        assertTrue(playerNotes.contains("### Added"))
+        assertTrue(playerNotes.contains("Minecraft 26.2 Support"))
+        assertTrue(playerNotes.contains("### Changed"))
+        assertTrue(playerNotes.contains("Improved gallery performance"))
+        assertFalse(playerNotes.contains("### Internal & Development"))
+        assertFalse(playerNotes.contains("ScreenUtils abstraction"))
+    }
 }

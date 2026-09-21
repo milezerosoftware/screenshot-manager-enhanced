@@ -22,6 +22,10 @@ class ReleaseHelper {
         }
     }
 
+    /**
+     * Generates a structured changelog section following the user-first style of release 2.0.0.
+     * Player/user-facing sections (Added, Changed, Fixed) come first, followed by Internal & Development.
+     */
     static String generateChangelogSection(String version, String dateStr, List<String> commits) {
         List<String> added = []
         List<String> changed = []
@@ -34,20 +38,23 @@ class ReleaseHelper {
                 return
             }
 
+            // Distinguish user-facing features vs internal changes
             if (msg.startsWith("feat:") || msg.startsWith("feat(")) {
-                added.add(cleanCommitMsg(msg))
+                // If it's a version port or game feature, it's user-facing Added
+                added.add(formatUserFacing(msg))
             } else if (msg.startsWith("fix:") || msg.startsWith("fix(")) {
-                fixed.add(cleanCommitMsg(msg))
+                fixed.add(formatUserFacing(msg))
             } else if (msg.startsWith("refactor:") || msg.startsWith("refactor(") || msg.startsWith("perf:") || msg.startsWith("perf(")) {
-                changed.add(cleanCommitMsg(msg))
+                changed.add(formatUserFacing(msg))
             } else {
-                internal.add(cleanCommitMsg(msg))
+                internal.add(formatInternal(msg))
             }
         }
 
         StringBuilder sb = new StringBuilder()
         sb.append("## [${version}] - ${dateStr}\n\n")
 
+        // 1. Gamer / Mod-User Focused Sections First
         if (!added.isEmpty()) {
             sb.append("### Added\n\n")
             added.each { sb.append("- ${it}\n") }
@@ -66,8 +73,9 @@ class ReleaseHelper {
             sb.append("\n")
         }
 
+        // 2. Technical & Architecture Details Second
         if (!internal.isEmpty()) {
-            sb.append("### Internal\n\n")
+            sb.append("### Internal & Development\n\n")
             internal.each { sb.append("- ${it}\n") }
             sb.append("\n")
         }
@@ -76,10 +84,48 @@ class ReleaseHelper {
         return sb.toString().trim()
     }
 
-    private static String cleanCommitMsg(String msg) {
-        // Strip common prefixes like 'feat: ' or 'fix: '
-        return msg.replaceFirst(/^(feat|fix|refactor|perf|chore|docs|test|style)(\([^\)]+\))?:\s*/, "")
+    private static String formatUserFacing(String msg) {
+        String clean = msg.replaceFirst(/^(feat|fix|refactor|perf)(\([^\)]+\))?:\s*/, "").trim()
+        // Bold the leading topic if appropriate (e.g. "Minecraft 26.2 Support: ...")
+        if (clean.toLowerCase().contains("minecraft") || clean.toLowerCase().contains("support")) {
+            def parts = clean.split(/(\s*-\s*|\s*:\s*)/, 2)
+            if (parts.length == 2) {
+                return "**${parts[0].capitalize()}**: ${parts[1].capitalize()}"
+            }
+        }
+        return clean.capitalize()
+    }
+
+    private static String formatInternal(String msg) {
+        return msg.replaceFirst(/^(chore|docs|test|style|ci|build)(\([^\)]+\))?:\s*/, "")
                   .capitalize()
+    }
+
+    /**
+     * Extracts only player-facing sections (Added, Changed, Fixed) for Modrinth,
+     * omitting Internal & Development details.
+     */
+    static String getPlayerFacingNotes(String fullNotes) {
+        StringBuilder sb = new StringBuilder()
+        boolean inInternal = false
+
+        fullNotes.eachLine { line ->
+            if (line.startsWith("### Internal")) {
+                inInternal = true
+                return
+            }
+            if (inInternal) {
+                // If another h3 appears after internal, end internal skipping
+                if (line.startsWith("### ")) {
+                    inInternal = false
+                } else {
+                    return
+                }
+            }
+            sb.append(line).append("\n")
+        }
+
+        return sb.toString().trim()
     }
 
     static String extractSection(String changelogContent, String version) {

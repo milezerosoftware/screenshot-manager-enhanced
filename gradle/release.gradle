@@ -300,6 +300,10 @@ tasks.register("publishRelease") {
         }
 
         println "\n--- Step 3: Publishing to Modrinth ---"
+        def playerNotes = ReleaseHelper.getPlayerFacingNotes(releaseNotes)
+        println "Modrinth Changelog Preview (Player-focused):\n"
+        println playerNotes
+
         versionList.each { mcVer ->
             def propsFile = file("versionProperties/${mcVer}.properties")
             def props = new Properties()
@@ -315,7 +319,7 @@ tasks.register("publishRelease") {
                 println "Uploading to Modrinth: ${modrinthVersion} (Game: ${gameVersions}, Loaders: ${loaders})..."
                 def jarFile = new File(libsDir, "screenshot-manager-enhanced-${version}-${mcVer}.jar")
                 uploadToModrinth(modrinthToken, props.getProperty("modrinth_slug", "screenshot-manager-enhanced"),
-                                 modrinthVersion, releaseNotes, gameVersions, loaders, jarFile)
+                                 modrinthVersion, playerNotes, gameVersions, loaders, jarFile)
                 println "Uploaded ${modrinthVersion} to Modrinth successfully!"
             }
         }
