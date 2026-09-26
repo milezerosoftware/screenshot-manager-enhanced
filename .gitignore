@@ -43,3 +43,8 @@ hs_err_*.log
 replay_*.log
 *.hprof
 *.jfr
+
+# local environment
+.env
+.env.*
+!.env.example

@@ -222,11 +222,17 @@ tasks.register("publishRelease") {
 
         // Check Modrinth Token
         def modrinthToken = System.getenv("MODRINTH_TOKEN")
+        if (!modrinthToken) {
+            modrinthToken = ReleaseHelper.getEnvFromFile(file(".env"), "MODRINTH_TOKEN")
+            if (modrinthToken) {
+                println "Loaded MODRINTH_TOKEN from .env file."
+            }
+        }
         if (!modrinthToken && project.hasProperty("modrinthToken")) {
             modrinthToken = project.modrinthToken.toString()
         }
         if (!modrinthToken) {
-            println "\n⚠️  MODRINTH_TOKEN not found in environment or gradle.properties."
+            println "\n⚠️  MODRINTH_TOKEN not found in environment, .env file, or gradle.properties."
             modrinthToken = askUser("Enter Modrinth Token (leave empty to skip Modrinth upload in dryRun)", "")
             if (!modrinthToken && !isDryRun()) {
                 throw new GradleException("MODRINTH_TOKEN is required to publish to Modrinth!")
@@ -236,8 +242,11 @@ tasks.register("publishRelease") {
         println "\n--- Step 1: Building Release Artifacts for all versions ---"
         if (!isDryRun()) {
             // Run buildAllFabric cleanly
-            def buildResult = exec {
-                commandLine "./gradlew", "buildAllFabric", "-PskipSources=true", "--no-daemon"
+            def isWindows = System.getProperty("os.name").toLowerCase().contains("windows")
+            def gradlewCmd = isWindows ? "gradlew.bat" : "./gradlew"
+            def buildResult = project.exec {
+                commandLine gradlewCmd, "buildAllFabric", "-PskipSources=true", "--no-daemon"
+                ignoreExitValue = true
             }
             if (buildResult.exitValue != 0) {
                 throw new GradleException("Failed to build all Fabric artifacts!")

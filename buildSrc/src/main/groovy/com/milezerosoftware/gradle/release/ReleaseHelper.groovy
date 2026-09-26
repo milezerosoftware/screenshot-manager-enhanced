@@ -147,4 +147,42 @@ class ReleaseHelper {
         }
         return sb.toString().trim()
     }
+
+    /**
+     * Parses key-value pairs from .env formatted content.
+     * Supports comments (#), empty lines, unquoted values, and single/double quoted values.
+     */
+    static Map<String, String> parseDotEnv(String content) {
+        Map<String, String> result = [:]
+        if (content == null) return result
+        content.eachLine { line ->
+            def trimmed = line.trim()
+            if (trimmed.isEmpty() || trimmed.startsWith("#")) {
+                return
+            }
+            int eqIdx = trimmed.indexOf("=")
+            if (eqIdx > 0) {
+                String key = trimmed.substring(0, eqIdx).trim()
+                String val = trimmed.substring(eqIdx + 1).trim()
+                if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+                    if (val.length() >= 2) {
+                        val = val.substring(1, val.length() - 1)
+                    }
+                }
+                result[key] = val
+            }
+        }
+        return result
+    }
+
+    /**
+     * Resolves a key from .env file if the file exists, returning null otherwise.
+     */
+    static String getEnvFromFile(File envFile, String key) {
+        if (envFile != null && envFile.exists()) {
+            def parsed = parseDotEnv(envFile.text)
+            return parsed[key]
+        }
+        return null
+    }
 }
