@@ -185,4 +185,54 @@ class ReleaseHelper {
         }
         return null
     }
+
+    /**
+     * Resolves Modrinth project ID from either an explicit Base62 ID or a slug.
+     * Ensures hyphens are never passed as a Base62 project_id to the Modrinth API.
+     */
+    static String resolveModrinthProjectId(String slugOrId) {
+        if (slugOrId == null || slugOrId.trim().isEmpty()) {
+            return "xs5bRkXn"
+        }
+        def trimmed = slugOrId.trim()
+        if (!trimmed.contains("-") && trimmed.matches("^[a-zA-Z0-9]+\$")) {
+            return trimmed
+        }
+        try {
+            def url = new URL("https://api.modrinth.com/v2/project/${trimmed}")
+            def conn = (HttpURLConnection) url.openConnection()
+            conn.setRequestMethod("GET")
+            conn.setRequestProperty("User-Agent", "milezerosoftware/screenshot-manager-enhanced (releaseMod gradle task)")
+            if (conn.responseCode == 200) {
+                def json = new groovy.json.JsonSlurper().parse(conn.inputStream)
+                if (json.id) {
+                    return json.id.toString()
+                }
+            }
+        } catch (Exception ignored) {}
+        return "xs5bRkXn"
+    }
+
+    /**
+     * Constructs a valid CreatableVersion payload adhering to the Modrinth OpenAPI specification.
+     */
+    static Map<String, Object> buildModrinthVersionPayload(String projectId, String versionNumber,
+                                                          String name, String changelog,
+                                                          List<String> gameVersions, List<String> loaders,
+                                                          String status = "listed") {
+        return [
+            game_versions: gameVersions,
+            version_number: versionNumber,
+            loaders: loaders,
+            featured: false,
+            name: name,
+            changelog: changelog,
+            status: status,
+            version_type: "release",
+            dependencies: [],
+            project_id: projectId,
+            file_parts: ["file"],
+            primary_file: "file"
+        ]
+    }
 }

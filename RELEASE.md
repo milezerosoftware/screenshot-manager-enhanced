@@ -84,64 +84,90 @@ The task will:
 
 ## Dependency Configuration
 
-Dependencies are pre-configured in the workflow and applied to every upload:
+Dependencies are defined on a per-Minecraft-version basis in `versionProperties/<mc_ver>.properties`:
 
-| Dependency | Type |
-|------------|------|
-| `fabric-api` | Required |
-| `cloth-config` | Required |
-| `modmenu` | Optional |
-
-To modify dependencies, edit `.github/workflows/release.yml`:
-
-```yaml
-dependencies: |
-  fabric-api(required)
-  cloth-config(required)
-  modmenu(optional)
+```properties
+modrinth_slug=screenshot-manager-enhanced
+modrinth_id=xs5bRkXn
+modrinth_game_versions=26.2
+modrinth_mod_loaders=fabric
+modrinth_required_dependencies=modmenu, cloth-config
 ```
 
 ---
 
-## Version Naming
+## Configuration & Environment Variables (`.env`)
 
-Each platform receives consistently named versions:
+The release manager supports loading credentials and flags from a local `.env` file in the project root. The file is excluded from version control via `.gitignore`.
 
-| Platform | Format | Example |
-|----------|--------|---------|
-| Modrinth | `version+mc_version` | `1.2.0+1.21.10` |
-| CurseForge | Display name | `Screenshot Manager Enhanced v1.2.0 for MC 1.21.10` |
-| GitHub | Tag-based | `v1.2.0` |
+### Available `.env` Variables
 
----
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `MODRINTH_TOKEN` | Production Modrinth Personal Access Token (with `VERSION_CREATE` scope) | *None* |
+| `MODRINTH_STAGING_TOKEN` | Token for Modrinth Staging Sandbox (`https://staging-api.modrinth.com`) | Falls back to `MODRINTH_TOKEN` |
+| `MODRINTH_STAGING` | Route Modrinth uploads to staging sandbox (`true` / `false`) | `false` |
+| `MODRINTH_DRAFT` | Upload version with `status: "draft"` instead of `status: "listed"` | `false` |
 
-## Configuration & Secrets
-
-### Modrinth Token
-The release task needs your Modrinth token to upload artifacts. You can provide it in one of two ways:
-1. Set the environment variable: `export MODRINTH_TOKEN="mrp_..."`
-2. Add it to your global `~/.gradle/gradle.properties`:
+### Setting Your Token
+You can provide your token in one of three ways:
+1. **Local `.env` file (recommended)**:
    ```properties
-   modrinthToken=mrp_...
+   MODRINTH_TOKEN=mrp_xxxxxxxxxxxxxxxxxxxx
    ```
-*(The task will also prompt you if it is not found and can save it to `~/.gradle/gradle.properties` automatically).*
+2. **Environment variable**:
+   ```bash
+   export MODRINTH_TOKEN="mrp_xxxxxxxxxxxxxxxxxxxx"
+   ```
+3. **Gradle property**:
+   ```bash
+   ./gradlew publishRelease -PmodrinthToken="mrp_xxxxxxxxxxxxxxxxxxxx"
+   ```
+
+*Note: The task validates authentication against the Modrinth API (`GET /v2/user`) up front before compiling artifacts or creating tags.*
 
 ---
 
-## Troubleshooting
+## Sandbox & Test Modes
 
-### If Modrinth upload fails
-1. The task leaves the GitHub Release in **DRAFT** mode so nothing broken is visible to users.
-2. Check the error message in the console (e.g. invalid token, version already exists).
-3. If needed, you can delete the draft release from GitHub or re-run `./gradlew publishRelease` after fixing the issue.
+The release workflow provides multiple levels of safe testing:
 
-### Common errors
+### 1. Dry-Run Mode (`-PdryRun=true`)
+Simulates the entire workflow without making git commits, tags, pushes, GitHub releases, or Modrinth uploads:
+```bash
+./gradlew publishRelease -PdryRun=true
+```
+
+### 2. Modrinth Staging Sandbox (`-PmodrinthStaging=true`)
+Directs API uploads to the Modrinth Staging API (`https://staging-api.modrinth.com`):
+```bash
+./gradlew publishRelease -PmodrinthStaging=true
+```
+
+### 3. Modrinth Draft Testing Mode (`-PmodrinthDraft=true`)
+Uploads version artifacts with `status: "draft"` instead of `status: "listed"`. The version appears in your Modrinth project dashboard for verification and manual inspection without being publicly listed to players:
+```bash
+./gradlew publishRelease -PmodrinthDraft=true
+```
+
+---
+
+## Troubleshooting & Resumability
+
+### Resumable Workflow
+If a release fails midway (for instance, network timeout or API error during Modrinth upload after creating the Git tag and GitHub draft release):
+1. Fix the underlying issue (e.g. update token in `.env`).
+2. Re-run `./gradlew publishRelease`.
+3. The release manager detects the existing Git tag and GitHub draft release, skips duplicate creation, and smoothly resumes uploading to Modrinth and publishing the release!
+
+### Common Errors
 
 | Error | Solution |
 |-------|----------|
-| `Invalid token` | Verify or regenerate token at [modrinth.com/settings/account](https://modrinth.com/settings/account) |
-| `Version already exists` | Bump `mod_version` in `gradle.properties` via `prepareRelease` |
-| `Working tree is dirty` | Commit or stash any uncommitted changes before releasing |
+| `Modrinth token authentication failed` | Check `MODRINTH_TOKEN` in `.env`. Ensure token has `VERSION_CREATE` scope. |
+| `Invalid character '-' in base62 encoding` | Ensure `modrinth_id` in `versionProperties/` uses the Base62 project ID (`xs5bRkXn`), not the hyphenated slug. |
+| `Tag already exists locally` | If the release is already published on GitHub, bump the version via `prepareRelease`. If it is a draft release, `publishRelease` will automatically resume. |
+| `Working tree is dirty` | Commit or stash any uncommitted changes before releasing. |
 
 ---
 

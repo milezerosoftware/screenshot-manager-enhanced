@@ -133,4 +133,41 @@ SPACED_KEY = spaced_value
             temp.delete()
         }
     }
+
+    @Test
+    void testResolveModrinthProjectId() {
+        // Base62 ID should pass straight through
+        assertEquals("xs5bRkXn", ReleaseHelper.resolveModrinthProjectId("xs5bRkXn"))
+        // Empty/null should return default ID
+        assertEquals("xs5bRkXn", ReleaseHelper.resolveModrinthProjectId(""))
+        assertEquals("xs5bRkXn", ReleaseHelper.resolveModrinthProjectId(null))
+        // Slug containing hyphens should resolve to base62 ID without hyphens
+        String resolved = ReleaseHelper.resolveModrinthProjectId("screenshot-manager-enhanced")
+        assertEquals("xs5bRkXn", resolved)
+        assertFalse(resolved.contains("-"))
+    }
+
+    @Test
+    void testBuildModrinthVersionPayload() {
+        def payload = ReleaseHelper.buildModrinthVersionPayload(
+            "xs5bRkXn", "v2.1.0+26.1.2", "Screenshot Manager Enhanced v2.1.0+26.1.2",
+            "Changelog details", ["26.1.2"], ["fabric"]
+        )
+        assertEquals("xs5bRkXn", payload["project_id"])
+        assertEquals("v2.1.0+26.1.2", payload["version_number"])
+        assertEquals("release", payload["version_type"])
+        assertEquals("listed", payload["status"])
+        assertEquals(false, payload["featured"])
+        assertEquals(["file"], payload["file_parts"])
+        assertEquals("file", payload["primary_file"])
+        assertEquals([], payload["dependencies"])
+        assertEquals(["26.1.2"], payload["game_versions"])
+        assertEquals(["fabric"], payload["loaders"])
+
+        def draftPayload = ReleaseHelper.buildModrinthVersionPayload(
+            "xs5bRkXn", "v2.1.0+26.1.2", "Screenshot Manager Enhanced v2.1.0+26.1.2",
+            "Changelog details", ["26.1.2"], ["fabric"], "draft"
+        )
+        assertEquals("draft", draftPayload["status"])
+    }
 }

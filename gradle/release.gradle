@@ -11,6 +11,37 @@ def isDryRun() {
     return project.hasProperty("dryRun") && project.dryRun.toString().toBoolean()
 }
 
+def getModrinthApiBaseUrl() {
+    if ((project.hasProperty("modrinthStaging") && project.modrinthStaging.toString().toBoolean()) ||
+        (project.hasProperty("modrinthEnv") && project.modrinthEnv.toString().equalsIgnoreCase("staging")) ||
+        System.getenv("MODRINTH_STAGING") == "true" ||
+        ReleaseHelper.getEnvFromFile(file(".env"), "MODRINTH_STAGING") == "true") {
+        return "https://staging-api.modrinth.com"
+    }
+    return "https://api.modrinth.com"
+}
+
+def isModrinthDraft() {
+    return (project.hasProperty("modrinthDraft") && project.modrinthDraft.toString().toBoolean()) ||
+           System.getenv("MODRINTH_DRAFT") == "true" ||
+           ReleaseHelper.getEnvFromFile(file(".env"), "MODRINTH_DRAFT") == "true"
+}
+
+def checkModrinthAuth(String token, String baseUrl) {
+    try {
+        def url = new URL("${baseUrl}/v2/user")
+        def conn = (HttpURLConnection) url.openConnection()
+        conn.setRequestMethod("GET")
+        conn.setRequestProperty("Authorization", token)
+        conn.setRequestProperty("User-Agent", "milezerosoftware/screenshot-manager-enhanced (releaseMod gradle task)")
+        if (conn.responseCode == 200) {
+            def user = new groovy.json.JsonSlurper().parse(conn.inputStream)
+            return user.username?.toString() ?: "authenticated user"
+        }
+    } catch (Exception ignored) {}
+    return null
+}
+
 def askUser(String prompt, String defaultValue = "") {
     if (project.hasProperty("confirmAll") && project.confirmAll.toString().toBoolean()) {
         return defaultValue ?: "y"
@@ -217,14 +248,32 @@ tasks.register("publishRelease") {
         println "Release Version: ${version}"
         println "Release Tag:     ${tag}"
 
-        // Check if tag already exists locally or remotely
+        // Check if release is already published on GitHub or tag exists
         def localTagCheck = ""
         try {
             localTagCheck = runGitCmd(["git", "tag", "-l", tag])
         } catch (Exception ignored) {}
 
-        if (!localTagCheck.isEmpty() && !isDryRun()) {
+        def releaseAlreadyPublished = false
+        def releaseDraftExists = false
+        try {
+            def ghCheck = runGitCmd(["gh", "release", "view", tag, "--json", "isDraft"])
+            if (ghCheck.contains('"isDraft":false')) {
+                releaseAlreadyPublished = true
+            } else if (ghCheck.contains('"isDraft":true')) {
+                releaseDraftExists = true
+            }
+        } catch (Exception ignored) {}
+
+        if (releaseAlreadyPublished && !isDryRun()) {
+            throw new GradleException("Release '${tag}' is already published on GitHub! Has this version already been released?")
+        }
+
+        if (!localTagCheck.isEmpty() && !releaseDraftExists && !isDryRun()) {
             throw new GradleException("Tag '${tag}' already exists locally! Has this version already been released?")
+        }
+        if (releaseDraftExists) {
+            println "ℹ️  Found existing draft release for ${tag}. Resuming release process..."
         }
 
         // Verify changelog has this version
@@ -235,8 +284,25 @@ tasks.register("publishRelease") {
         }
         println "\nRelease notes extracted (${releaseNotes.readLines().size()} lines)."
 
-        // Check Modrinth Token
-        def modrinthToken = System.getenv("MODRINTH_TOKEN")
+        // Check Modrinth Token & Sandbox/Staging
+        def modrinthBaseUrl = getModrinthApiBaseUrl()
+        def isStaging = modrinthBaseUrl.contains("staging")
+        def modrinthStatus = isModrinthDraft() ? "draft" : "listed"
+
+        if (isStaging) {
+            println "\n🧪 [MODRINTH STAGING SANDBOX] Uploads will target ${modrinthBaseUrl}"
+        }
+        if (modrinthStatus == "draft") {
+            println "🧪 [MODRINTH DRAFT MODE] Versions will be uploaded with status: 'draft' (unlisted/preview)"
+        }
+
+        def modrinthToken = null
+        if (isStaging) {
+            modrinthToken = System.getenv("MODRINTH_STAGING_TOKEN") ?: ReleaseHelper.getEnvFromFile(file(".env"), "MODRINTH_STAGING_TOKEN")
+        }
+        if (!modrinthToken) {
+            modrinthToken = System.getenv("MODRINTH_TOKEN")
+        }
         if (!modrinthToken) {
             modrinthToken = ReleaseHelper.getEnvFromFile(file(".env"), "MODRINTH_TOKEN")
             if (modrinthToken) {
@@ -251,6 +317,15 @@ tasks.register("publishRelease") {
             modrinthToken = askUser("Enter Modrinth Token (leave empty to skip Modrinth upload in dryRun)", "")
             if (!modrinthToken && !isDryRun()) {
                 throw new GradleException("MODRINTH_TOKEN is required to publish to Modrinth!")
+            }
+        }
+
+        if (modrinthToken && !isDryRun()) {
+            def username = checkModrinthAuth(modrinthToken, modrinthBaseUrl)
+            if (username) {
+                println "✅ Modrinth authenticated as user: ${username}"
+            } else {
+                throw new GradleException("Modrinth token authentication failed against ${modrinthBaseUrl} (check token validity or scopes).")
             }
         }
 
@@ -299,14 +374,22 @@ tasks.register("publishRelease") {
             println "[DRY-RUN] Would run: git push origin ${tag}"
             println "[DRY-RUN] Would run: gh release create ${tag} fabric/build/libs/*.jar --draft --title '${tag}' --notes-file ${tempNotesFile.absolutePath}"
         } else {
-            runGitCmd(["git", "tag", "-a", tag, "-m", "Release ${tag}"])
-            runGitCmd(["git", "push", "origin", tag])
+            if (localTagCheck.isEmpty()) {
+                runGitCmd(["git", "tag", "-a", tag, "-m", "Release ${tag}"])
+                runGitCmd(["git", "push", "origin", tag])
+            } else {
+                println "Tag '${tag}' already exists, skipping tag creation."
+            }
 
-            def ghCmd = ["gh", "release", "create", tag]
-            artifacts.each { ghCmd.add(it.absolutePath) }
-            ghCmd.addAll(["--draft", "--title", tag, "--notes-file", tempNotesFile.absolutePath])
-            def ghOut = runGitCmd(ghCmd)
-            println "Draft GitHub release created: ${ghOut}"
+            if (!releaseDraftExists) {
+                def ghCmd = ["gh", "release", "create", tag]
+                artifacts.each { ghCmd.add(it.absolutePath) }
+                ghCmd.addAll(["--draft", "--title", tag, "--notes-file", tempNotesFile.absolutePath])
+                def ghOut = runGitCmd(ghCmd)
+                println "Draft GitHub release created: ${ghOut}"
+            } else {
+                println "Draft GitHub release '${tag}' already exists with artifacts, skipping draft creation."
+            }
         }
         tempNotesFile.delete()
 
@@ -330,14 +413,16 @@ tasks.register("publishRelease") {
             def modrinthVersion = "${tag}+${mcVer}"
             def gameVersions = props.getProperty("modrinth_game_versions", mcVer).split(',').collect { it.trim() }
             def loaders = props.getProperty("modrinth_mod_loaders", "fabric").split(',').collect { it.trim() }
+            def rawProjectId = props.getProperty("modrinth_id") ?: props.getProperty("modrinth_slug", "xs5bRkXn")
+            def modrinthProjectId = ReleaseHelper.resolveModrinthProjectId(rawProjectId)
 
             if (isDryRun()) {
-                println "[DRY-RUN] Would upload to Modrinth: version=${modrinthVersion}, game_versions=${gameVersions}, loaders=${loaders}"
+                println "[DRY-RUN] Would upload to Modrinth (${modrinthBaseUrl}): projectId=${modrinthProjectId}, version=${modrinthVersion}, status=${modrinthStatus}, game_versions=${gameVersions}, loaders=${loaders}"
             } else {
-                println "Uploading to Modrinth: ${modrinthVersion} (Game: ${gameVersions}, Loaders: ${loaders})..."
+                println "Uploading to Modrinth (${modrinthBaseUrl}): ${modrinthVersion} (Project: ${modrinthProjectId}, Status: ${modrinthStatus}, Game: ${gameVersions}, Loaders: ${loaders})..."
                 def jarFile = new File(libsDir, "screenshot-manager-enhanced-${version}-${mcVer}.jar")
-                uploadToModrinth(modrinthToken, props.getProperty("modrinth_slug", "screenshot-manager-enhanced"),
-                                 modrinthVersion, playerNotes, gameVersions, loaders, jarFile)
+                uploadToModrinth(modrinthBaseUrl, modrinthToken, modrinthProjectId,
+                                 modrinthVersion, playerNotes, gameVersions, loaders, jarFile, modrinthStatus)
                 println "Uploaded ${modrinthVersion} to Modrinth successfully!"
             }
         }
@@ -359,10 +444,10 @@ tasks.register("publishRelease") {
 }
 
 // Helper to perform multipart POST to Modrinth API v2
-def uploadToModrinth(String token, String projectId, String versionNumber, String changelog,
-                     List<String> gameVersions, List<String> loaders, File jarFile) {
+def uploadToModrinth(String baseUrl, String token, String projectId, String versionNumber, String changelog,
+                     List<String> gameVersions, List<String> loaders, File jarFile, String status = "listed") {
     def boundary = "----ModrinthUploadBoundary" + System.currentTimeMillis()
-    def url = new URL("https://api.modrinth.com/v2/version")
+    def url = new URL("${baseUrl}/v2/version")
     def conn = (HttpURLConnection) url.openConnection()
     conn.setRequestMethod("POST")
     conn.setDoOutput(true)
@@ -370,18 +455,11 @@ def uploadToModrinth(String token, String projectId, String versionNumber, Strin
     conn.setRequestProperty("User-Agent", "milezerosoftware/screenshot-manager-enhanced (releaseMod gradle task)")
     conn.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary)
 
-    // Construct data JSON
-    def data = [
-        game_versions: gameVersions,
-        version_number: versionNumber,
-        loaders: loaders,
-        featured: false,
-        name: "Screenshot Manager Enhanced ${versionNumber}",
-        changelog: changelog,
-        status: "listed",
-        project_id: projectId,
-        file_parts: ["file"]
-    ]
+    // Construct data JSON conforming to Modrinth CreatableVersion OpenAPI schema
+    def data = ReleaseHelper.buildModrinthVersionPayload(
+        projectId, versionNumber, "Screenshot Manager Enhanced ${versionNumber}",
+        changelog, gameVersions, loaders, status
+    )
     def dataJson = groovy.json.JsonOutput.toJson(data)
 
     conn.outputStream.withStream { out ->
