@@ -99,4 +99,38 @@ class ReleaseHelperTest {
         assertFalse(playerNotes.contains("### Internal & Development"))
         assertFalse(playerNotes.contains("ScreenUtils abstraction"))
     }
+
+    @Test
+    void testParseDotEnv() {
+        String envContent = """
+# This is a comment
+MODRINTH_TOKEN=mrp_test12345
+GITHUB_TOKEN="ghp_quotedtoken"
+SINGLE_QUOTED='single_value'
+EMPTY_LINE=
+# Another comment
+SPACED_KEY = spaced_value
+"""
+        Map<String, String> parsed = ReleaseHelper.parseDotEnv(envContent)
+        assertEquals("mrp_test12345", parsed["MODRINTH_TOKEN"])
+        assertEquals("ghp_quotedtoken", parsed["GITHUB_TOKEN"])
+        assertEquals("single_value", parsed["SINGLE_QUOTED"])
+        assertEquals("", parsed["EMPTY_LINE"])
+        assertEquals("spaced_value", parsed["SPACED_KEY"])
+        assertNull(parsed["NON_EXISTENT"])
+    }
+
+    @Test
+    void testGetEnvFromFile() {
+        File temp = File.createTempFile("test", ".env")
+        try {
+            temp.text = "MODRINTH_TOKEN=mrp_file_token\n"
+            assertEquals("mrp_file_token", ReleaseHelper.getEnvFromFile(temp, "MODRINTH_TOKEN"))
+            assertNull(ReleaseHelper.getEnvFromFile(temp, "UNKNOWN_KEY"))
+            assertNull(ReleaseHelper.getEnvFromFile(new File("nonexistent.env"), "MODRINTH_TOKEN"))
+            assertNull(ReleaseHelper.getEnvFromFile(null, "MODRINTH_TOKEN"))
+        } finally {
+            temp.delete()
+        }
+    }
 }
