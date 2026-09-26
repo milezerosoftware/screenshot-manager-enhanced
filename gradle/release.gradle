@@ -1,0 +1,403 @@
+import com.milezerosoftware.gradle.release.ReleaseHelper
+import java.time.LocalDate
+
+// --- Release Automation Script ---
+// Implements the two-phase gated release process with human-in-the-loop confirmation
+// Phase 1: prepareRelease (calculates version, synthesizes changelog, creates release/vX.Y.Z branch and PR to main)
+// Phase 2: publishRelease (runs on main after PR merge, builds artifacts, drafts GH release, publishes to Modrinth, finalizes GH release)
+// Supports -PdryRun=true for safe sandbox testing.
+
+def isDryRun() {
+    return project.hasProperty("dryRun") && project.dryRun.toString().toBoolean()
+}
+
+def askUser(String prompt, String defaultValue = "") {
+    if (project.hasProperty("confirmAll") && project.confirmAll.toString().toBoolean()) {
+        return defaultValue ?: "y"
+    }
+    def console = System.console()
+    if (console != null) {
+        def promptText = defaultValue ? "${prompt} [${defaultValue}]: " : "${prompt}: "
+        def input = console.readLine(promptText)?.trim()
+        return input ?: defaultValue
+    } else {
+        // Non-interactive fallback
+        return defaultValue
+    }
+}
+
+def runGitCmd(List args) {
+    List<String> strArgs = args.collect { it.toString() }
+    def proc = new ProcessBuilder(strArgs).directory(project.rootDir).start()
+    def stdout = new StringBuilder()
+    def stderr = new StringBuilder()
+    proc.consumeProcessOutput(stdout, stderr)
+    int exitVal = proc.waitFor()
+    if (exitVal != 0) {
+        throw new GradleException("Git command failed (${strArgs.join(' ')}): ${stderr.toString().trim()}")
+    }
+    return stdout.toString().trim()
+}
+
+def getCurrentBranch() {
+    return runGitCmd(["git", "rev-parse", "--abbrev-ref", "HEAD"])
+}
+
+def getLatestTag() {
+    try {
+        return runGitCmd(["git", "describe", "--tags", "--abbrev=0"])
+    } catch (Exception e) {
+        return ""
+    }
+}
+
+def getCommitsSince(String tag) {
+    def range = tag ? "${tag}..HEAD" : "HEAD"
+    def logOutput = runGitCmd(["git", "log", range, "--pretty=format:%s"])
+    return logOutput.readLines().findAll { !it.trim().isEmpty() }
+}
+
+tasks.register("prepareRelease") {
+    group = "release"
+    description = "Phase 1: Determine version bump, generate changelog, and open release PR to main"
+
+    doLast {
+        println "\n========================================================"
+        println "          🚀 SME RELEASE MANAGER - PREPARE RELEASE       "
+        if (isDryRun()) {
+            println "             [RUNNING IN DRY-RUN MODE]                  "
+        }
+        println "========================================================"
+
+        def currentBranch = getCurrentBranch()
+        println "Current Branch: ${currentBranch}"
+
+        // Check git status
+        def status = runGitCmd(["git", "status", "--porcelain"])
+        if (!status.isEmpty()) {
+            if (isDryRun()) {
+                println "⚠️  [DRY-RUN NOTICE] Working tree has uncommitted changes (ignored for dry-run simulation)."
+            } else {
+                throw new GradleException("Working tree has uncommitted changes. Please commit or stash before preparing a release.")
+            }
+        }
+
+        def latestTag = getLatestTag()
+        println "Latest Tag: ${latestTag ?: '(None found)'}"
+
+        def commits = getCommitsSince(latestTag)
+        println "Found ${commits.size()} commits since ${latestTag ?: 'repository creation'}."
+
+        def currentVer = project.mod_version.toString()
+        def suggestedVer = ReleaseHelper.determineNextVersion(currentVer, commits)
+
+        println "\n--- Step 1: Version Determination ---"
+        println "Current gradle.properties version: ${currentVer}"
+        println "Suggested next version:            ${suggestedVer}"
+        println "\nSelect Release Version:"
+        println "  [1] ${suggestedVer} (Suggested)"
+        println "  [2] Enter custom version"
+
+        def choice = askUser("Choice", "1")
+        def targetVersion = suggestedVer
+        if (choice == "2") {
+            targetVersion = askUser("Enter custom version (e.g. 2.1.0)", suggestedVer)
+        }
+        println "Selected Target Version: ${targetVersion}"
+
+        println "\n--- Step 2: Changelog Synthesis ---"
+        def today = LocalDate.now().toString()
+        def changelogSection = ReleaseHelper.generateChangelogSection(targetVersion, today, commits)
+        println "Preview:\n"
+        println changelogSection
+
+        def changelogApproval = askUser("Accept this changelog?", "y")
+        if (!changelogApproval.equalsIgnoreCase("y")) {
+            println "Release preparation aborted by user."
+            return
+        }
+
+        println "\n--- Step 3: Branch & Pull Request Preparation ---"
+        def releaseBranch = "release/v${targetVersion}"
+        println "Release Branch to create: ${releaseBranch}"
+
+        if (isDryRun()) {
+            println "\n[DRY-RUN] Would checkout -b ${releaseBranch}"
+            println "[DRY-RUN] Would update gradle.properties: mod_version=${targetVersion}"
+            println "[DRY-RUN] Would prepend section to CHANGELOG.md"
+            println "[DRY-RUN] Would commit: 'chore: prepare release v${targetVersion}'"
+            println "[DRY-RUN] Would push: git push -u origin ${releaseBranch}"
+            println "[DRY-RUN] Would run: gh pr create --base main --head ${releaseBranch} --title 'chore: release v${targetVersion}'"
+            println "\n[DRY-RUN] Phase 1 checks completed successfully!"
+            return
+        }
+
+        // Real Execution
+        runGitCmd(["git", "checkout", "-b", releaseBranch])
+
+        // Update gradle.properties
+        def propsFile = file("gradle.properties")
+        def propsText = propsFile.text
+        propsText = propsText.replaceAll(/mod_version=.*/, "mod_version=${targetVersion}")
+        propsFile.text = propsText
+
+        // Prepend to CHANGELOG.md
+        def changelogFile = file("CHANGELOG.md")
+        def changelogText = changelogFile.text
+        def headerEndIdx = changelogText.indexOf("## [")
+        if (headerEndIdx != -1) {
+            def header = changelogText.substring(0, headerEndIdx)
+            def rest = changelogText.substring(headerEndIdx)
+            changelogFile.text = "${header}${changelogSection}\n\n${rest}"
+        } else {
+            changelogFile.text = "${changelogSection}\n\n${changelogText}"
+        }
+
+        // Git commit & push
+        runGitCmd(["git", "add", "gradle.properties", "CHANGELOG.md"])
+        runGitCmd(["git", "commit", "-m", "chore: prepare release v${targetVersion}"])
+        runGitCmd(["git", "push", "-u", "origin", releaseBranch])
+
+        // Open PR via gh
+        def prCmd = ["gh", "pr", "create", "--base", "main", "--head", releaseBranch,
+                     "--title", "chore: release v${targetVersion}",
+                     "--body", "### 🚀 Release v${targetVersion}\n\n${changelogSection}"]
+        def prOutput = runGitCmd(prCmd)
+
+        println "\n========================================================"
+        println "🎉 Phase 1 Complete! Pull Request opened successfully: "
+        println "${prOutput}"
+        println "\nNext Steps:"
+        println "1. Review and merge the Pull Request into 'main' on GitHub."
+        println "2. Checkout main: 'git checkout main && git pull'"
+        println "3. Run Phase 2:  './gradlew publishRelease'"
+        println "========================================================"
+    }
+}
+
+tasks.register("publishRelease") {
+    group = "release"
+    description = "Phase 2: Build all artifacts, create draft GitHub release, publish to Modrinth, and finalize release"
+
+    doLast {
+        println "\n========================================================"
+        println "          📦 SME RELEASE MANAGER - PUBLISH RELEASE       "
+        if (isDryRun()) {
+            println "             [RUNNING IN DRY-RUN MODE]                  "
+        }
+        println "========================================================"
+
+        def currentBranch = getCurrentBranch()
+        if (currentBranch != "main" && !isDryRun()) {
+            throw new GradleException("publishRelease must be run from 'main' branch! Current branch is '${currentBranch}'.")
+        }
+
+        def status = runGitCmd(["git", "status", "--porcelain"])
+        if (!status.isEmpty() && !isDryRun()) {
+            throw new GradleException("Working tree is dirty. Please commit or stash changes before publishing.")
+        }
+
+        def version = project.mod_version.toString()
+        def tag = "v${version}"
+        println "Release Version: ${version}"
+        println "Release Tag:     ${tag}"
+
+        // Check if tag already exists locally or remotely
+        def localTagCheck = ""
+        try {
+            localTagCheck = runGitCmd(["git", "tag", "-l", tag])
+        } catch (Exception ignored) {}
+
+        if (!localTagCheck.isEmpty() && !isDryRun()) {
+            throw new GradleException("Tag '${tag}' already exists locally! Has this version already been released?")
+        }
+
+        // Verify changelog has this version
+        def changelogFile = file("CHANGELOG.md")
+        def releaseNotes = ReleaseHelper.extractSection(changelogFile.text, version)
+        if (releaseNotes.isEmpty()) {
+            throw new GradleException("No changelog section found in CHANGELOG.md for version '${version}'!")
+        }
+        println "\nRelease notes extracted (${releaseNotes.readLines().size()} lines)."
+
+        // Check Modrinth Token
+        def modrinthToken = System.getenv("MODRINTH_TOKEN")
+        if (!modrinthToken && project.hasProperty("modrinthToken")) {
+            modrinthToken = project.modrinthToken.toString()
+        }
+        if (!modrinthToken) {
+            println "\n⚠️  MODRINTH_TOKEN not found in environment or gradle.properties."
+            modrinthToken = askUser("Enter Modrinth Token (leave empty to skip Modrinth upload in dryRun)", "")
+            if (!modrinthToken && !isDryRun()) {
+                throw new GradleException("MODRINTH_TOKEN is required to publish to Modrinth!")
+            }
+        }
+
+        println "\n--- Step 1: Building Release Artifacts for all versions ---"
+        if (!isDryRun()) {
+            // Run buildAllFabric cleanly
+            def buildResult = exec {
+                commandLine "./gradlew", "buildAllFabric", "-PskipSources=true", "--no-daemon"
+            }
+            if (buildResult.exitValue != 0) {
+                throw new GradleException("Failed to build all Fabric artifacts!")
+            }
+        } else {
+            println "[DRY-RUN] Would run: ./gradlew buildAllFabric -PskipSources=true --no-daemon"
+        }
+
+        // Verify generated jars
+        def versionList = project.versionList
+        println "\nTarget versions configured: ${versionList}"
+        def libsDir = file("fabric/build/libs")
+        List<File> artifacts = []
+
+        versionList.each { mcVer ->
+            def expectedJar = new File(libsDir, "screenshot-manager-enhanced-${version}-${mcVer}.jar")
+            if (!isDryRun()) {
+                if (!expectedJar.exists() || expectedJar.length() == 0) {
+                    throw new GradleException("Expected release artifact missing or empty: ${expectedJar.absolutePath}")
+                }
+                artifacts.add(expectedJar)
+                println "Verified artifact: ${expectedJar.name} (${String.format('%.2f MB', expectedJar.length() / (1024.0 * 1024.0))})"
+            } else {
+                println "[DRY-RUN] Verified target artifact mapping for MC ${mcVer}: ${expectedJar.name}"
+            }
+        }
+
+        // Gate: Confirm proceeding to draft release
+        def proceedDraft = askUser("\nProceed to create draft release on GitHub?", "y")
+        if (!proceedDraft.equalsIgnoreCase("y")) {
+            println "Release aborted by user."
+            return
+        }
+
+        println "\n--- Step 2: Creating Git Tag & GitHub Release in DRAFT ---"
+        def tempNotesFile = File.createTempFile("release_notes_${version}", ".md")
+        tempNotesFile.text = releaseNotes
+
+        if (isDryRun()) {
+            println "[DRY-RUN] Would run: git tag -a ${tag} -m 'Release ${tag}'"
+            println "[DRY-RUN] Would run: git push origin ${tag}"
+            println "[DRY-RUN] Would run: gh release create ${tag} fabric/build/libs/*.jar --draft --title '${tag}' --notes-file ${tempNotesFile.absolutePath}"
+        } else {
+            runGitCmd(["git", "tag", "-a", tag, "-m", "Release ${tag}"])
+            runGitCmd(["git", "push", "origin", tag])
+
+            def ghCmd = ["gh", "release", "create", tag]
+            artifacts.each { ghCmd.add(it.absolutePath) }
+            ghCmd.addAll(["--draft", "--title", tag, "--notes-file", tempNotesFile.absolutePath])
+            def ghOut = runGitCmd(ghCmd)
+            println "Draft GitHub release created: ${ghOut}"
+        }
+        tempNotesFile.delete()
+
+        // Gate: Confirm Modrinth Publish
+        def proceedModrinth = askUser("\nReady to publish ${versionList.size()} artifacts to Modrinth?", "y")
+        if (!proceedModrinth.equalsIgnoreCase("y")) {
+            println "Modrinth upload skipped. The release remains as a Draft on GitHub."
+            return
+        }
+
+        println "\n--- Step 3: Publishing to Modrinth ---"
+        def playerNotes = ReleaseHelper.getPlayerFacingNotes(releaseNotes)
+        println "Modrinth Changelog Preview (Player-focused):\n"
+        println playerNotes
+
+        versionList.each { mcVer ->
+            def propsFile = file("versionProperties/${mcVer}.properties")
+            def props = new Properties()
+            propsFile.withInputStream { props.load(it) }
+
+            def modrinthVersion = "${tag}+${mcVer}"
+            def gameVersions = props.getProperty("modrinth_game_versions", mcVer).split(',').collect { it.trim() }
+            def loaders = props.getProperty("modrinth_mod_loaders", "fabric").split(',').collect { it.trim() }
+
+            if (isDryRun()) {
+                println "[DRY-RUN] Would upload to Modrinth: version=${modrinthVersion}, game_versions=${gameVersions}, loaders=${loaders}"
+            } else {
+                println "Uploading to Modrinth: ${modrinthVersion} (Game: ${gameVersions}, Loaders: ${loaders})..."
+                def jarFile = new File(libsDir, "screenshot-manager-enhanced-${version}-${mcVer}.jar")
+                uploadToModrinth(modrinthToken, props.getProperty("modrinth_slug", "screenshot-manager-enhanced"),
+                                 modrinthVersion, playerNotes, gameVersions, loaders, jarFile)
+                println "Uploaded ${modrinthVersion} to Modrinth successfully!"
+            }
+        }
+
+        println "\n--- Step 4: Finalizing GitHub Release ---"
+        if (isDryRun()) {
+            println "[DRY-RUN] Would run: gh release edit ${tag} --draft=false"
+        } else {
+            runGitCmd(["gh", "release", "edit", tag, "--draft=false"])
+            println "GitHub release ${tag} is now published and public!"
+        }
+
+        println "\n========================================================"
+        println "🎉 Release ${tag} complete and published everywhere!    "
+        println "GitHub:   https://github.com/milezerosoftware/screenshot-manager-enhanced/releases/tag/${tag}"
+        println "Modrinth: https://modrinth.com/mod/screenshot-manager-enhanced/versions"
+        println "========================================================"
+    }
+}
+
+// Helper to perform multipart POST to Modrinth API v2
+def uploadToModrinth(String token, String projectId, String versionNumber, String changelog,
+                     List<String> gameVersions, List<String> loaders, File jarFile) {
+    def boundary = "----ModrinthUploadBoundary" + System.currentTimeMillis()
+    def url = new URL("https://api.modrinth.com/v2/version")
+    def conn = (HttpURLConnection) url.openConnection()
+    conn.setRequestMethod("POST")
+    conn.setDoOutput(true)
+    conn.setRequestProperty("Authorization", token)
+    conn.setRequestProperty("User-Agent", "milezerosoftware/screenshot-manager-enhanced (releaseMod gradle task)")
+    conn.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary)
+
+    // Construct data JSON
+    def data = [
+        game_versions: gameVersions,
+        version_number: versionNumber,
+        loaders: loaders,
+        featured: false,
+        name: "Screenshot Manager Enhanced ${versionNumber}",
+        changelog: changelog,
+        status: "listed",
+        project_id: projectId,
+        file_parts: ["file"]
+    ]
+    def dataJson = groovy.json.JsonOutput.toJson(data)
+
+    conn.outputStream.withStream { out ->
+        def writer = new PrintWriter(new OutputStreamWriter(out, "UTF-8"))
+        // Part 1: data JSON
+        writer.print("--" + boundary + "\r\n")
+        writer.print("Content-Disposition: form-data; name=\"data\"\r\n")
+        writer.print("Content-Type: application/json\r\n\r\n")
+        writer.print(dataJson + "\r\n")
+        writer.flush()
+
+        // Part 2: file
+        writer.print("--" + boundary + "\r\n")
+        writer.print("Content-Disposition: form-data; name=\"file\"; filename=\"" + jarFile.name + "\"\r\n")
+        writer.print("Content-Type: application/java-archive\r\n\r\n")
+        writer.flush()
+
+        jarFile.withInputStream { fis ->
+            byte[] buf = new byte[8192]
+            int len
+            while ((len = fis.read(buf)) > 0) {
+                out.write(buf, 0, len)
+            }
+            out.flush()
+        }
+
+        writer.print("\r\n--" + boundary + "--\r\n")
+        writer.flush()
+    }
+
+    int responseCode = conn.responseCode
+    if (responseCode != 200 && responseCode != 201) {
+        def errStream = conn.errorStream ?: conn.inputStream
+        def errMsg = errStream ? errStream.text : "(no response body)"
+        throw new GradleException("Modrinth upload failed (HTTP ${responseCode}): ${errMsg}")
+    }
+}
