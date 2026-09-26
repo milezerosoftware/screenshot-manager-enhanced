@@ -26,17 +26,32 @@ def askUser(String prompt, String defaultValue = "") {
     }
 }
 
-def runGitCmd(List args) {
+def runCommand(List args, boolean inheritIO = false) {
     List<String> strArgs = args.collect { it.toString() }
-    def proc = new ProcessBuilder(strArgs).directory(project.rootDir).start()
-    def stdout = new StringBuilder()
-    def stderr = new StringBuilder()
-    proc.consumeProcessOutput(stdout, stderr)
-    int exitVal = proc.waitFor()
-    if (exitVal != 0) {
-        throw new GradleException("Git command failed (${strArgs.join(' ')}): ${stderr.toString().trim()}")
+    def pb = new ProcessBuilder(strArgs).directory(project.rootDir)
+    if (inheritIO) {
+        pb.inheritIO()
+        def proc = pb.start()
+        int exitVal = proc.waitFor()
+        if (exitVal != 0) {
+            throw new GradleException("Command failed with exit code ${exitVal}: ${strArgs.join(' ')}")
+        }
+        return ""
+    } else {
+        def proc = pb.start()
+        def stdout = new StringBuilder()
+        def stderr = new StringBuilder()
+        proc.consumeProcessOutput(stdout, stderr)
+        int exitVal = proc.waitFor()
+        if (exitVal != 0) {
+            throw new GradleException("Command failed (${strArgs.join(' ')}): ${stderr.toString().trim()}")
+        }
+        return stdout.toString().trim()
     }
-    return stdout.toString().trim()
+}
+
+def runGitCmd(List args) {
+    return runCommand(args, false)
 }
 
 def getCurrentBranch() {
@@ -241,16 +256,10 @@ tasks.register("publishRelease") {
 
         println "\n--- Step 1: Building Release Artifacts for all versions ---"
         if (!isDryRun()) {
-            // Run buildAllFabric cleanly
+            // Run buildAllFabric cleanly using ProcessBuilder
             def isWindows = System.getProperty("os.name").toLowerCase().contains("windows")
-            def gradlewCmd = isWindows ? "gradlew.bat" : "./gradlew"
-            def buildResult = project.exec {
-                commandLine gradlewCmd, "buildAllFabric", "-PskipSources=true", "--no-daemon"
-                ignoreExitValue = true
-            }
-            if (buildResult.exitValue != 0) {
-                throw new GradleException("Failed to build all Fabric artifacts!")
-            }
+            def gradlewCmd = isWindows ? new File(project.rootDir, "gradlew.bat").absolutePath : new File(project.rootDir, "gradlew").absolutePath
+            runCommand([gradlewCmd, "buildAllFabric", "-PskipSources=true", "--no-daemon"], true)
         } else {
             println "[DRY-RUN] Would run: ./gradlew buildAllFabric -PskipSources=true --no-daemon"
         }
