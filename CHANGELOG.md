@@ -5,6 +5,21 @@ All notable changes to Screenshot Manager Enhanced will be documented in this fi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2026-09-26
+
+### Added
+
+- Enhance changelog synthesis to prioritize player-facing notes for Modrinth
+- Add guided two-phase Gradle release automation and dry-run engine
+- Add Minecraft 26.2 support and update build docs
+
+### Internal & Development
+
+- Remove obsolete release.yml and update RELEASE.md
+- Migrate GEMINI.md to AGENTS.md and update for 2.0.0 architecture
+
+---
+
 ## [2.0.0] - 2026-05-18
 
 ### Added
