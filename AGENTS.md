@@ -27,7 +27,7 @@ You are a senior software engineer. You don't do anything halfass. You allow for
 
 ## Control Panel & Build Commands
 
-Build commands use the dynamic property `-Pmc_ver` to target specific Minecraft versions (e.g. `1.21.11`, `26.1.2`, `26.2`).
+Build commands use the dynamic property `-Pmc_ver` to target specific Minecraft versions (e.g. `1.21.11`, `26.1.2`, `26.2`, `26.3`).
 
 * **Run Tests (Common module):**
   ```bash

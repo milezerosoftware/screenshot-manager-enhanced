@@ -25,4 +25,27 @@ public class ScreenUtils {
         Minecraft client = Minecraft.getInstance();
         return client != null && client.gui != null ? client.gui.toastManager() : null;
     }
+
+    public static void openPath(java.nio.file.Path path) {
+        try {
+            Class<?> blaze3d = Class.forName("com.mojang.blaze3d.Blaze3D");
+            java.lang.reflect.Method m = blaze3d.getMethod("openPath", java.nio.file.Path.class);
+            m.invoke(null, path);
+            return;
+        } catch (Throwable ignored) {
+        }
+        try {
+            Class<?> utilClass = Class.forName("net.minecraft.util.Util");
+            Object platform = utilClass.getMethod("getPlatform").invoke(null);
+            platform.getClass().getMethod("openPath", java.nio.file.Path.class).invoke(platform, path);
+            return;
+        } catch (Throwable ignored) {
+        }
+        try {
+            if (java.awt.Desktop.isDesktopSupported()) {
+                java.awt.Desktop.getDesktop().open(path.toFile());
+            }
+        } catch (Throwable ignored) {
+        }
+    }
 }
