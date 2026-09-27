@@ -24,7 +24,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
-import net.minecraft.util.Util;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
@@ -142,7 +141,7 @@ public class GalleryScreen extends BaseOwoScreen<FlowLayout> {
 
         // Open Folder Button (Right) - Pinned Right
         var openFolderBtn = UIComponents.button(Component.literal("Open Folder"), b -> {
-            Util.getPlatform().openPath(currentDir);
+            ScreenUtils.openPath(currentDir);
         }).sizing(Sizing.fixed(90), Sizing.fixed(20));
         openFolderBtn.positioning(Positioning.relative(100, 20));
         bottomBar.child(openFolderBtn);

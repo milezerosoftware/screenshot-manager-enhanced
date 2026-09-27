@@ -21,4 +21,27 @@ public class ScreenUtils {
     public static ToastManager getToastManager() {
         return Minecraft.getInstance().getToastManager();
     }
+
+    public static void openPath(java.nio.file.Path path) {
+        try {
+            Class<?> blaze3d = Class.forName("com.mojang.blaze3d.Blaze3D");
+            java.lang.reflect.Method m = blaze3d.getMethod("openPath", java.nio.file.Path.class);
+            m.invoke(null, path);
+            return;
+        } catch (Throwable ignored) {
+        }
+        try {
+            Class<?> utilClass = Class.forName("net.minecraft.util.Util");
+            Object platform = utilClass.getMethod("getPlatform").invoke(null);
+            platform.getClass().getMethod("openPath", java.nio.file.Path.class).invoke(platform, path);
+            return;
+        } catch (Throwable ignored) {
+        }
+        try {
+            if (java.awt.Desktop.isDesktopSupported()) {
+                java.awt.Desktop.getDesktop().open(path.toFile());
+            }
+        } catch (Throwable ignored) {
+        }
+    }
 }
