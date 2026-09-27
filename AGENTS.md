@@ -24,6 +24,8 @@ You are a senior software engineer. You don't do anything halfass. You allow for
 1. **Branching Strategy:** All new work must be in a branch based off the repository's default branch (`main`) or a dependent feature branch. No direct commits to `main`. Pull requests must target `main`.
 2. **Step-by-Step Commits:** All implementation steps must conclude with a git commit that is explicitly approved by the developer.
 3. **Mandatory Testing:** All implementations must be written in a testable manner with unit tests. Run `./gradlew :common:test` to verify before committing.
+4. **Version Upgrade Dependency Gate:** Before writing code or branches for a new Minecraft version, the agent MUST verify that all 5 core dependencies (Fabric Loader, Fabric API, Cloth Config, ModMenu, and owo-lib) have published an official artifact specifically targeting `<mc_ver>`. If ANY dependency is missing (notably `owo-lib`), the agent MUST NOT begin implementation and MUST flag the version upgrade as ON HOLD.
+5. **Bridge Reusability & Anti-Duplication:** The agent MUST NOT create a new `common/src/client/java-<ver>` directory unless underlying library/vanilla API signatures have broke incompatibly. The agent must first inspect API diffs and reuse `ui_version=<existing>`. For minor method moves (e.g. `openPath`), implement adaptive runtime reflection/dispatch in `ScreenUtils` rather than duplicating files.
 
 ## Control Panel & Build Commands
 
@@ -79,3 +81,45 @@ This project uses the [Universal Mod Template](https://github.com/thebuildcraft/
 
 * **Implementation Plans:** Stored in `docs/planning/`. Plans serve as the single source of truth during feature development.
 * **Release Changelogs:** Maintained in `CHANGELOG.md` adhering to Keep a Changelog.
+
+## Minecraft Version Upgrade Protocol (AI Agent Execution)
+
+When an AI agent is requested to support a new Minecraft version (`<mc_ver>`), the agent MUST execute the following deterministic protocol:
+
+### Step 1: Pre-Flight Dependency Verification (Hard Gate)
+Check remote Maven / Meta repositories for all 5 core dependencies:
+1. `Fabric Loader`: `https://meta.fabricmc.net/v2/versions/loader/<mc_ver>`
+2. `Fabric API`: `https://maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/maven-metadata.xml` (must contain `+<mc_ver>`)
+3. `Cloth Config`: `https://maven.shedaniel.me/me/shedaniel/cloth/cloth-config-fabric/maven-metadata.xml` (must contain `<mc_ver>.x`)
+4. `ModMenu`: `https://maven.terraformersmc.com/releases/com/terraformersmc/modmenu/maven-metadata.xml` (must support `<mc_ver>`)
+5. `owo-lib`: `https://maven.wispforest.io/releases/io/wispforest/owo-lib/maven-metadata.xml` (must contain `+<mc_ver>`)
+
+**Failure Rule:** If any dependency (specifically `owo-lib`) is missing an artifact explicitly targeting `<mc_ver>`:
+- **DO NOT** create a full feature implementation.
+- **DO NOT** bundle incompatible or mismatched versions into releases.
+- Open a Draft PR titled `feat: add Minecraft <mc_ver> support [HOLD: Awaiting <dep> <mc_ver>]`.
+- Report the blocker to the developer and halt further code execution.
+
+### Step 2: Bridge Audit & Reusability Determination
+- Compare vanilla/library API changes between previous supported version and `<mc_ver>`.
+- If signatures and types are identical, configure `versionProperties/<mc_ver>.properties` with `ui_version=<existing_ui_version>`.
+- If method movements occurred (e.g. `openPath`), implement adaptive runtime detection in existing bridge classes (`ScreenUtils`) to support both old and new targets.
+- Only create a new `common/src/client/java-<ui_version>` directory if breaking changes cannot be reconciled via adaptive bridge helpers.
+
+### Step 3: Local Verification Sequence
+Run all 3 verification commands in order:
+```bash
+# 1. Unit tests for new version
+./gradlew :common:test -Pmc_ver=<mc_ver> --no-daemon
+
+# 2. Fabric build for new version
+./gradlew :fabric:build -Pmc_ver=<mc_ver> --no-daemon
+
+# 3. Matrix build for all active versions
+./gradlew buildAllFabric --no-daemon
+```
+
+### Step 4: Documentation Synchronization
+- Update `README.md` example commands and supported version note block.
+- Update `AGENTS.md` version list.
+- Add an `[Unreleased]` entry to `CHANGELOG.md`.
