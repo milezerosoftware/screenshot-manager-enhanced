@@ -58,7 +58,7 @@ public class ScreenshotPathGenerator {
         }
 
         // Sanitize dimension if needed, usually passed as "minecraft:overworld"
-        String safeDimension = dimension.replace(":", "_");
+        String safeDimension = dimension != null ? dimension.replace(":", "_") : "";
 
         return switch (mode) {
             case DATE -> (dateStr != null) ? new File(screenshotsDir, dateStr) : screenshotsDir;

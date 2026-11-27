@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 
 /**
  * Manages the persistence of the {@link ModConfig}.
@@ -107,7 +108,8 @@ public class ConfigManager {
                 LOGGER.error("Failed to load Screenshot Manager config: {}", e.getMessage());
                 // Backup broken file to prevent data loss
                 try {
-                    Files.copy(configFile, configFile.resolveSibling(configFile.getFileName().toString() + ".broken"));
+                    Files.copy(configFile, configFile.resolveSibling(configFile.getFileName().toString() + ".broken"),
+                            StandardCopyOption.REPLACE_EXISTING);
                     LOGGER.info("Backed up broken config to {}.broken", configFile.getFileName());
                 } catch (IOException copyEx) {
                     LOGGER.error("Failed to backup broken config", copyEx);

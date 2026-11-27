@@ -1,6 +1,7 @@
 package com.milezerosoftware.mc.screenshotmanagerenhanced.client.util;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.*;
@@ -209,6 +210,38 @@ public class MetadataHandlerTest {
         assertEquals(-1, pos);
     }
 
+    @Test
+    @Timeout(2)
+    void testFindChunkPositionWithNegativeChunkLengthDoesNotHang() throws Exception {
+        Method findChunkPosition = MetadataHandler.class.getDeclaredMethod(
+                "findChunkPosition", byte[].class, String.class);
+        findChunkPosition.setAccessible(true);
+
+        // Length -12 (0xFFFFFFF4) previously caused an infinite loop (pos += 12 + (-12))
+        byte[] corruptMinus12 = createCorruptChunkPng(-12, "IHDR");
+        assertEquals(-1, (int) findChunkPosition.invoke(null, corruptMinus12, "IDAT"));
+
+        // Integer.MIN_VALUE (0x80000000)
+        byte[] corruptMinValue = createCorruptChunkPng(Integer.MIN_VALUE, "IHDR");
+        assertEquals(-1, (int) findChunkPosition.invoke(null, corruptMinValue, "IDAT"));
+    }
+
+    @Test
+    @Timeout(2)
+    void testFindChunkPositionWithHugeChunkLengthDoesNotHangOrOverflow() throws Exception {
+        Method findChunkPosition = MetadataHandler.class.getDeclaredMethod(
+                "findChunkPosition", byte[].class, String.class);
+        findChunkPosition.setAccessible(true);
+
+        // Integer.MAX_VALUE (0x7FFFFFFF) previously overflowed pos + 12 + length to negative int
+        byte[] corruptMaxValue = createCorruptChunkPng(Integer.MAX_VALUE, "IHDR");
+        assertEquals(-1, (int) findChunkPosition.invoke(null, corruptMaxValue, "IDAT"));
+
+        // Positive length exceeding remaining PNG data
+        byte[] corruptTooLarge = createCorruptChunkPng(99999, "IHDR");
+        assertEquals(-1, (int) findChunkPosition.invoke(null, corruptTooLarge, "IDAT"));
+    }
+
     // =====================================================
     // writePngWithXmp Tests (via reflection)
     // =====================================================
@@ -401,11 +434,33 @@ public class MetadataHandlerTest {
 
         int itxtPos = (int) findChunkPosition.invoke(null, modifiedPng, "iTXt");
         assertTrue(itxtPos > 0, "iTXt chunk should exist");
+
+        // Verify XMP metadata payload is embedded
+        String modifiedText = new String(modifiedPng, StandardCharsets.UTF_8);
+        assertTrue(modifiedText.contains("Integration Test World"), "Embedded XMP should contain world name");
+        assertTrue(modifiedText.contains("overworld"), "Embedded XMP should contain dimension");
+        assertTrue(modifiedText.contains("123, 64, -456"), "Embedded XMP should contain coordinates");
     }
 
     // =====================================================
     // Helper Methods
     // =====================================================
+
+    private byte[] createCorruptChunkPng(int declaredLength, String chunkType) throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        // PNG Signature
+        baos.write(new byte[] { (byte) 0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A });
+        // Declared length (4 bytes, big-endian)
+        baos.write((declaredLength >> 24) & 0xFF);
+        baos.write((declaredLength >> 16) & 0xFF);
+        baos.write((declaredLength >> 8) & 0xFF);
+        baos.write(declaredLength & 0xFF);
+        // Chunk type (4 bytes)
+        baos.write(chunkType.getBytes(StandardCharsets.ISO_8859_1));
+        // Some trailing payload bytes
+        baos.write(new byte[16]);
+        return baos.toByteArray();
+    }
 
     /**
      * Creates a minimal valid PNG file structure.

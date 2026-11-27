@@ -1,9 +1,15 @@
 package com.milezerosoftware.mc.screenshotmanagerenhanced.client.util;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.zip.CRC32;
 
 /**
@@ -23,35 +29,42 @@ import java.util.zip.CRC32;
  */
 public class MetadataHandler {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger("screenshot-manager-enhanced");
+
     private static final int FILE_STABILITY_CHECKS = 3;
     private static final int MAX_WAIT_ATTEMPTS = 50;
     private static final int POLL_INTERVAL_MS = 100;
+
+    private static final ExecutorService EXECUTOR = Executors.newSingleThreadExecutor(r -> {
+        Thread thread = new Thread(r, "ScreenshotMetadataWriter");
+        thread.setDaemon(true);
+        return thread;
+    });
 
     /**
      * Writes XMP metadata to a PNG file asynchronously.
      * 
      * <p>
-     * This method spawns a daemon thread that waits for the file to be fully
-     * written, then embeds the provided metadata as XMP data in the PNG.
+     * Submits a task to a shared single-threaded daemon executor that waits for the
+     * file to exist and stabilize in size, then embeds the provided metadata as XMP
+     * data in the PNG.
      * </p>
      *
      * @param file     The PNG screenshot file to modify
      * @param metadata The metadata to embed
      */
     public static void writeMetadataAsync(File file, ScreenshotMetadata metadata) {
-        Thread thread = new Thread(() -> {
+        EXECUTOR.submit(() -> {
             try {
                 writeMetadata(file, metadata);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
             } catch (Exception e) {
                 // Log the exception - metadata embedding is non-critical but errors aid
                 // debugging
-                System.err.println("[Screenshot Manager Enhanced] Failed to embed metadata: " + e.getMessage());
-                e.printStackTrace();
+                LOGGER.error("Failed to embed metadata for {}: {}", file.getName(), e.getMessage(), e);
             }
-        }, "ScreenshotMetadataWriter");
-
-        thread.setDaemon(true);
-        thread.start();
+        });
     }
 
     /**
@@ -61,11 +74,11 @@ public class MetadataHandler {
      * This method performs the following steps:
      * </p>
      * <ol>
-     * <li>Waits for the file to be fully written (size stability check)</li>
+     * <li>Waits for the file to exist and be fully written (size stability check)</li>
      * <li>Reads the existing PNG image</li>
      * <li>Constructs XMP XML with the provided metadata</li>
      * <li>Writes a new PNG with the XMP chunk inserted before IDAT</li>
-     * <li>Atomically replaces the original file</li>
+     * <li>Atomically replaces the original file (with non-atomic fallback)</li>
      * </ol>
      *
      * @param file     The PNG file to modify
@@ -73,7 +86,7 @@ public class MetadataHandler {
      * @throws Exception If any step of the process fails
      */
     private static void writeMetadata(File file, ScreenshotMetadata metadata) throws Exception {
-        // Wait for file to be fully written (size stability check)
+        // Wait for file to exist and be fully written (size stability check)
         waitForFileStability(file);
 
         // Read the existing PNG bytes directly (avoids slow re-encoding)
@@ -98,29 +111,41 @@ public class MetadataHandler {
 
         // Write to temp file with XMP chunk
         File tempFile = new File(file.getParentFile(), file.getName() + ".tmp");
-        writePngWithXmp(pngData, tempFile, xmpXml);
+        try {
+            writePngWithXmp(pngData, tempFile, xmpXml);
 
-        // Atomic replace using Files.move (safer on Windows, prevents data loss)
-        if (tempFile.exists() && tempFile.length() > 0) {
-            Files.move(tempFile.toPath(), file.toPath(),
-                    StandardCopyOption.REPLACE_EXISTING,
-                    StandardCopyOption.ATOMIC_MOVE);
-        } else {
-            throw new IOException("Temp file is missing or empty");
+            // Atomic replace using Files.move (safer on Windows, prevents data loss)
+            if (tempFile.exists() && tempFile.length() > 0) {
+                try {
+                    Files.move(tempFile.toPath(), file.toPath(),
+                            StandardCopyOption.REPLACE_EXISTING,
+                            StandardCopyOption.ATOMIC_MOVE);
+                } catch (AtomicMoveNotSupportedException e) {
+                    Files.move(tempFile.toPath(), file.toPath(),
+                            StandardCopyOption.REPLACE_EXISTING);
+                }
+            } else {
+                throw new IOException("Temp file is missing or empty");
+            }
+        } finally {
+            if (tempFile.exists()) {
+                Files.deleteIfExists(tempFile.toPath());
+            }
         }
     }
 
     /**
-     * Waits for a file to be fully written by checking size stability.
+     * Waits for a file to exist and be fully written by checking size stability.
      * 
      * <p>
      * Polls the file size every {@link #POLL_INTERVAL_MS}ms and considers
      * the file stable after {@link #FILE_STABILITY_CHECKS} consecutive readings
-     * with the same size.
+     * with the same non-zero size.
      * </p>
      *
      * @param file The file to wait for
-     * @throws IOException If the file doesn't exist or is empty after waiting
+     * @throws IOException          If the file doesn't exist or is empty after waiting
+     * @throws InterruptedException If the waiting thread is interrupted
      */
     private static void waitForFileStability(File file) throws IOException, InterruptedException {
         long lastSize = -1;
@@ -172,6 +197,9 @@ public class MetadataHandler {
         if (idatPos == -1) {
             // Fallback: just append before IEND
             int iendPos = pngData.length - 12;
+            if (iendPos < 0) {
+                throw new IOException("Invalid PNG data: file too short");
+            }
             try (FileOutputStream fos = new FileOutputStream(output)) {
                 fos.write(pngData, 0, iendPos);
                 writeItxtChunk(fos, "XML:com.adobe.xmp", xmpXml);
@@ -197,19 +225,29 @@ public class MetadataHandler {
      *
      * @param pngData   The raw PNG byte data
      * @param chunkType The 4-character chunk type to find (e.g., "IDAT")
-     * @return The byte position of the chunk, or -1 if not found
+     * @return The byte position of the chunk, or -1 if not found or PNG data is malformed
      */
     private static int findChunkPosition(byte[] pngData, String chunkType) {
+        if (pngData == null || pngData.length < 8) {
+            return -1;
+        }
+
         // Skip PNG signature (8 bytes)
         int pos = 8;
         byte[] typeBytes = chunkType.getBytes(StandardCharsets.ISO_8859_1);
 
-        while (pos + 8 < pngData.length) {
+        while (pos + 8 <= pngData.length) {
             // Read chunk length (4 bytes, big-endian)
             int length = ((pngData[pos] & 0xFF) << 24) |
                     ((pngData[pos + 1] & 0xFF) << 16) |
                     ((pngData[pos + 2] & 0xFF) << 8) |
                     (pngData[pos + 3] & 0xFF);
+
+            // Validate chunk length and guard against integer overflow / out-of-bounds
+            long nextPos = pos + 12L + length;
+            if (length < 0 || nextPos > pngData.length || nextPos <= pos) {
+                return -1;
+            }
 
             // Check chunk type (4 bytes at pos+4)
             boolean match = true;
@@ -225,7 +263,7 @@ public class MetadataHandler {
             }
 
             // Move to next chunk: length(4) + type(4) + data(length) + crc(4)
-            pos += 4 + 4 + length + 4;
+            pos = (int) nextPos;
         }
 
         return -1;
