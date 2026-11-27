@@ -12,6 +12,33 @@ pluginManagement {
 // Inline Version Loading Logic
 def defaultVer = settings.providers.gradleProperty("minecraft_version").getOrElse("1.21.11")
 def mcVer = settings.providers.gradleProperty("mc_ver").getOrElse(defaultVer)
+
+def isBelowBaseline = { String version ->
+    if (version.startsWith("26.")) return false
+    def parts = version.split('\\.')
+    if (parts.length < 2) return true
+    try {
+        int major = parts[0].toInteger()
+        int minor = parts[1].toInteger()
+        int patch = parts.length >= 3 ? parts[2].toInteger() : 0
+        if (major < 1) return true
+        if (major == 1) {
+            if (minor < 21) return true
+            if (minor == 21 && patch < 11) return true
+        }
+        return false
+    } catch (NumberFormatException e) {
+        return true
+    }
+}
+
+if (isBelowBaseline(mcVer)) {
+    throw new GradleException(
+        "Minecraft version '${mcVer}' is below the supported baseline (1.21.11+). " +
+        "Supported targets: 1.21.11, 26.1.2, 26.2."
+    )
+}
+
 def propsFile = file("versionProperties/${mcVer}.properties")
 
 if (!propsFile.exists()) {
