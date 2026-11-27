@@ -2,6 +2,7 @@ package com.milezerosoftware.mc.screenshotmanagerenhanced.client.gui.screen;
 
 import com.milezerosoftware.mc.screenshotmanagerenhanced.client.render.ScreenshotTextureManager;
 import com.milezerosoftware.mc.screenshotmanagerenhanced.client.util.ClipboardUtil;
+import com.milezerosoftware.mc.screenshotmanagerenhanced.client.util.GalleryDirectoryScanner;
 import com.milezerosoftware.mc.screenshotmanagerenhanced.client.util.ScreenUtils;
 import io.wispforest.owo.ui.base.BaseOwoScreen;
 import io.wispforest.owo.ui.component.*;
@@ -19,13 +20,19 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 public class SingleImageScreen extends BaseOwoScreen<FlowLayout> {
+    private static final int MAX_UPLOADS_PER_FRAME = 2;
+    private static final int FULL_VIEW_TARGET_WIDTH = 1920;
 
     private final Screen parent;
     private final Path galleryDir;
     private final List<Path> images;
     private int currentIndex;
+    private long viewGeneration = 0;
+    private boolean navigatingToGallery = false;
+    private boolean deleting = false;
 
     public SingleImageScreen(Screen parent, List<Path> images, int index, Path galleryDir) {
         this.parent = parent;
@@ -41,7 +48,12 @@ public class SingleImageScreen extends BaseOwoScreen<FlowLayout> {
 
     @Override
     protected void build(FlowLayout root) {
-        root.surface(Surface.VANILLA_TRANSLUCENT);
+        // Drain up to MAX_UPLOADS_PER_FRAME decoded textures on the render thread each frame.
+        // Using owo-lib's Surface callback keeps this cross-version compatible across MC 1.21.x and 26.x.
+        root.surface((context, component) -> {
+            ScreenshotTextureManager.drainPendingUploads(MAX_UPLOADS_PER_FRAME);
+            Surface.VANILLA_TRANSLUCENT.draw(context, component);
+        });
         root.horizontalAlignment(HorizontalAlignment.CENTER);
         root.verticalAlignment(VerticalAlignment.CENTER);
 
@@ -51,6 +63,7 @@ public class SingleImageScreen extends BaseOwoScreen<FlowLayout> {
         }
 
         Path currentImage = images.get(currentIndex);
+        long generation = ++this.viewGeneration;
 
         // Header
         var header = UIContainers.verticalFlow(Sizing.fill(100), Sizing.content());
@@ -67,30 +80,43 @@ public class SingleImageScreen extends BaseOwoScreen<FlowLayout> {
         imageContainer.horizontalAlignment(HorizontalAlignment.CENTER);
         imageContainer.verticalAlignment(VerticalAlignment.CENTER);
 
-        Identifier textureId = ScreenshotTextureManager.getOrCreateThumbnail(currentImage, 1920);
+        int maxImgWidth = Math.max(1, (int) (this.width * 0.80));
+        int maxImgHeight = Math.max(1, (int) (this.height * 0.65));
 
-        // Calculate size: 80% of screen width, 16:9
-        int imgWidth = (int) (this.width * 0.80);
-        int imgHeight = (int) (imgWidth * (9.0 / 16.0));
+        int[] placeholderFit = GalleryDirectoryScanner.fitWithinBounds(16, 9, maxImgWidth, maxImgHeight);
+        Identifier placeholderId = ScreenshotTextureManager.getPlaceholderId();
+        var placeholder = UIComponents.texture(placeholderId, 0, 0, 1, 1, 1, 1);
+        placeholder.sizing(Sizing.fixed(placeholderFit[0]), Sizing.fixed(placeholderFit[1]));
 
-        // Ensure it fits vertically too
-        if (imgHeight > this.height * 0.65) {
-            imgHeight = (int) (this.height * 0.65);
-            imgWidth = (int) (imgHeight * (16.0 / 9.0));
-        }
-
-        int aspectW = 16;
-        int aspectH = 9;
-
-        var texture = UIComponents.texture(textureId, 0, 0, aspectW, aspectH, aspectW, aspectH);
-        texture.sizing(Sizing.fixed(imgWidth), Sizing.fixed(imgHeight));
-
-        imageContainer.child(texture);
+        imageContainer.child(placeholder);
         root.child(imageContainer);
+
+        ScreenshotTextureManager.requestThumbnail(currentImage, FULL_VIEW_TARGET_WIDTH, result -> {
+            if (generation != this.viewGeneration
+                    || this.uiAdapter == null
+                    || Minecraft.getInstance().screen != this) {
+                return;
+            }
+            int[] fitted = GalleryDirectoryScanner.fitWithinBounds(
+                    result.width(), result.height(), maxImgWidth, maxImgHeight);
+            var loadedTexture = UIComponents.texture(
+                    result.id(), 0, 0, result.width(), result.height(), result.width(), result.height());
+            loadedTexture.sizing(Sizing.fixed(fitted[0]), Sizing.fixed(fitted[1]));
+            imageContainer.clearChildren();
+            imageContainer.child(loadedTexture);
+        });
+
+        // Prefetch adjacent images so Prev/Next navigation hits the warm LRU cache
+        if (currentIndex > 0) {
+            ScreenshotTextureManager.prefetch(images.get(currentIndex - 1), FULL_VIEW_TARGET_WIDTH);
+        }
+        if (currentIndex < images.size() - 1) {
+            ScreenshotTextureManager.prefetch(images.get(currentIndex + 1), FULL_VIEW_TARGET_WIDTH);
+        }
 
         // Footer / Controls
         int minButtonWidth = 260; // Minimal width to fit all buttons
-        int controlWidth = Math.max(imgWidth, minButtonWidth);
+        int controlWidth = Math.max(placeholderFit[0], minButtonWidth);
 
         // Use Stack for precise edge pinning (matches GalleryScreen)
         var footer = UIContainers.stack(Sizing.fixed(controlWidth), Sizing.fixed(30));
@@ -107,19 +133,26 @@ public class SingleImageScreen extends BaseOwoScreen<FlowLayout> {
 
         // Back
         leftGroup.child(UIComponents.button(Component.literal("Back"), b -> {
+            this.navigatingToGallery = true;
             ScreenUtils.setScreen(new GalleryScreen(this.parent, this.galleryDir));
         }).sizing(Sizing.fixed(actionBtnWidth), Sizing.fixed(btnHeight)));
 
         // Copy
         leftGroup.child(UIComponents.button(Component.literal("Copy"), b -> {
-            boolean success = ClipboardUtil.copyImageToClipboard(images.get(currentIndex));
-            if (success) {
-                SystemToast.add(
-                        ScreenUtils.getToastManager(),
-                        SystemToast.SystemToastId.PERIODIC_NOTIFICATION,
-                        Component.literal("Copied!"),
-                        Component.literal("Image copied to clipboard"));
+            if (currentIndex < 0 || currentIndex >= images.size()) {
+                return;
             }
+            Path pathToCopy = images.get(currentIndex);
+            CompletableFuture.supplyAsync(() -> ClipboardUtil.copyImageToClipboard(pathToCopy))
+                    .thenAccept(success -> Minecraft.getInstance().execute(() -> {
+                        if (Boolean.TRUE.equals(success)) {
+                            SystemToast.add(
+                                    ScreenUtils.getToastManager(),
+                                    SystemToast.SystemToastId.PERIODIC_NOTIFICATION,
+                                    Component.literal("Copied!"),
+                                    Component.literal("Image copied to clipboard"));
+                        }
+                    }));
         }).sizing(Sizing.fixed(actionBtnWidth), Sizing.fixed(btnHeight)));
 
         // Delete
@@ -169,56 +202,68 @@ public class SingleImageScreen extends BaseOwoScreen<FlowLayout> {
     }
 
     private void rebuild() {
-        ScreenshotTextureManager.clearCache();
+        ScreenshotTextureManager.cancelPending();
         this.uiAdapter.rootComponent.clearChildren();
         build(this.uiAdapter.rootComponent);
     }
 
     private void deleteCurrentImage() {
-        if (images.isEmpty())
+        if (images.isEmpty() || deleting || currentIndex < 0 || currentIndex >= images.size())
             return;
+        deleting = true;
         Path path = images.get(currentIndex);
-        try {
-            boolean trashed = false;
-            // Try Native Trash first
+
+        CompletableFuture.supplyAsync(() -> {
             try {
-                if (java.awt.Desktop.isDesktopSupported()
-                        && java.awt.Desktop.getDesktop().isSupported(java.awt.Desktop.Action.MOVE_TO_TRASH)) {
-                    java.awt.Desktop.getDesktop().moveToTrash(path.toFile());
-                    trashed = true;
+                boolean trashed = false;
+                // Try Native Trash first
+                try {
+                    if (java.awt.Desktop.isDesktopSupported()
+                            && java.awt.Desktop.getDesktop().isSupported(java.awt.Desktop.Action.MOVE_TO_TRASH)) {
+                        trashed = java.awt.Desktop.getDesktop().moveToTrash(path.toFile());
+                    }
+                } catch (Exception e) {
+                    // Ignore AWT errors (headless etc)
                 }
-            } catch (Exception e) {
-                // Ignore AWT errors (headless etc)
-            }
 
-            if (!trashed) {
-                Files.delete(path);
-            }
-
-            images.remove(currentIndex);
-            ScreenshotTextureManager.clearCache();
-
-            if (images.isEmpty()) {
-                this.onClose(); // Return to gallery
-            } else {
-                if (currentIndex >= images.size()) {
-                    currentIndex = images.size() - 1;
+                if (!trashed) {
+                    Files.deleteIfExists(path);
                 }
-                rebuild(); // Refresh UI for next image
+                return true;
+            } catch (IOException e) {
+                e.printStackTrace();
+                return false;
             }
-        } catch (IOException e) {
-            e.printStackTrace();
-            SystemToast.add(
-                    ScreenUtils.getToastManager(),
-                    SystemToast.SystemToastId.PERIODIC_NOTIFICATION,
-                    Component.literal("Error"),
-                    Component.literal("Failed to delete file"));
-        }
+        }).thenAccept(deleted -> Minecraft.getInstance().execute(() -> {
+            deleting = false;
+            if (Boolean.TRUE.equals(deleted)) {
+                ScreenshotTextureManager.evict(path);
+                if (this.uiAdapter == null || Minecraft.getInstance().screen != this) {
+                    return;
+                }
+                images.remove(path);
+                if (images.isEmpty()) {
+                    this.onClose(); // Return to gallery
+                } else {
+                    if (currentIndex >= images.size()) {
+                        currentIndex = images.size() - 1;
+                    }
+                    rebuild(); // Refresh UI for next image
+                }
+            } else if (this.uiAdapter != null && Minecraft.getInstance().screen == this) {
+                SystemToast.add(
+                        ScreenUtils.getToastManager(),
+                        SystemToast.SystemToastId.PERIODIC_NOTIFICATION,
+                        Component.literal("Error"),
+                        Component.literal("Failed to delete file"));
+            }
+        }));
     }
 
     @Override
     public void onClose() {
         if (parent != null) {
+            this.navigatingToGallery = true;
             ScreenUtils.setScreen(this.minecraft, new GalleryScreen(this.parent, this.galleryDir));
         } else {
             super.onClose();
@@ -228,6 +273,13 @@ public class SingleImageScreen extends BaseOwoScreen<FlowLayout> {
     @Override
     public void removed() {
         super.removed();
-        ScreenshotTextureManager.clearCache();
+        this.viewGeneration++;
+        this.uiAdapter = null;
+        if (this.navigatingToGallery) {
+            this.navigatingToGallery = false;
+            ScreenshotTextureManager.cancelPending();
+        } else {
+            ScreenshotTextureManager.clearCache();
+        }
     }
 }

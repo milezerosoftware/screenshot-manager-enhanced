@@ -51,15 +51,8 @@ public class ClipboardUtil {
 
     private static boolean copyMacOsascript(Path imagePath) {
         try {
-            // Use AppleScript to set clipboard to the image file content
-            // "set the clipboard to (read (POSIX file "/path/...") as JPEG picture)" -
-            // simpler often works with "as record" or just "read" for file
-            // Reliable way: "set the clipboard to (read (POSIX file "...") as TIFF
-            // picture)"
-
-            ProcessBuilder pb = new ProcessBuilder("osascript", "-e",
-                    "set the clipboard to (read (POSIX file \"" + imagePath.toAbsolutePath().toString()
-                            + "\") as TIFF picture)");
+            // Pass the path via argv to avoid AppleScript string interpolation/injection issues
+            ProcessBuilder pb = new ProcessBuilder(ClipboardCommandHelper.buildMacOsascriptCommand(imagePath));
             Process p = pb.start();
             int exitCode = p.waitFor();
             return exitCode == 0;
