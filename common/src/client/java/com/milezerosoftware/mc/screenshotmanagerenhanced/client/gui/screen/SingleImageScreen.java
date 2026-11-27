@@ -94,7 +94,7 @@ public class SingleImageScreen extends BaseOwoScreen<FlowLayout> {
         ScreenshotTextureManager.requestThumbnail(currentImage, FULL_VIEW_TARGET_WIDTH, result -> {
             if (generation != this.viewGeneration
                     || this.uiAdapter == null
-                    || Minecraft.getInstance().screen != this) {
+                    || ScreenUtils.getCurrentScreen() != this) {
                 return;
             }
             int[] fitted = GalleryDirectoryScanner.fitWithinBounds(
@@ -238,7 +238,7 @@ public class SingleImageScreen extends BaseOwoScreen<FlowLayout> {
             deleting = false;
             if (Boolean.TRUE.equals(deleted)) {
                 ScreenshotTextureManager.evict(path);
-                if (this.uiAdapter == null || Minecraft.getInstance().screen != this) {
+                if (this.uiAdapter == null || ScreenUtils.getCurrentScreen() != this) {
                     return;
                 }
                 images.remove(path);
@@ -250,7 +250,7 @@ public class SingleImageScreen extends BaseOwoScreen<FlowLayout> {
                     }
                     rebuild(); // Refresh UI for next image
                 }
-            } else if (this.uiAdapter != null && Minecraft.getInstance().screen == this) {
+            } else if (this.uiAdapter != null && ScreenUtils.getCurrentScreen() == this) {
                 SystemToast.add(
                         ScreenUtils.getToastManager(),
                         SystemToast.SystemToastId.PERIODIC_NOTIFICATION,

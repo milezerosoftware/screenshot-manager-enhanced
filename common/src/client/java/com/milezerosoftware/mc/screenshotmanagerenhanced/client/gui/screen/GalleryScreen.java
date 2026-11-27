@@ -268,7 +268,7 @@ public class GalleryScreen extends BaseOwoScreen<FlowLayout> {
         }).thenAcceptAsync(result -> {
             if (generation != this.refreshGeneration
                     || this.uiAdapter == null
-                    || Minecraft.getInstance().screen != this) {
+                    || ScreenUtils.getCurrentScreen() != this) {
                 return;
             }
 
@@ -447,7 +447,7 @@ public class GalleryScreen extends BaseOwoScreen<FlowLayout> {
         ScreenshotTextureManager.requestThumbnail(path, thumbBase, result -> {
             if (renderGen != this.pageRenderGeneration
                     || this.uiAdapter == null
-                    || Minecraft.getInstance().screen != this) {
+                    || ScreenUtils.getCurrentScreen() != this) {
                 return;
             }
             int[] fitted = GalleryDirectoryScanner.fitWithinBounds(result.width(), result.height(), w, h);
