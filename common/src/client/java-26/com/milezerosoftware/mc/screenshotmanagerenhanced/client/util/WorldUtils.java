@@ -5,12 +5,18 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.server.IntegratedServer;
 import net.minecraft.world.level.storage.LevelResource;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
 
 public class WorldUtils {
 
-    private static final Minecraft client = Minecraft.getInstance();
+    private static final Logger LOGGER = LoggerFactory.getLogger("screenshot-manager-enhanced");
+
+    private static Minecraft client() {
+        return Minecraft.getInstance();
+    }
 
     /**
      * Gets a unique identifier for the current game world.
@@ -27,28 +33,29 @@ public class WorldUtils {
      */
     @NotNull
     public static String getWorldId() {
+        Minecraft client = client();
         if (client.level == null) {
             return "MENU";
         }
 
         if (client.isSingleplayer()) {
-            System.out.println("Client is in singleplayer");
+            LOGGER.debug("Client is in singleplayer");
             IntegratedServer server = client.getSingleplayerServer();
             if (server != null) {
                 try {
                     // Get the actual folder name by resolving the canonical path
                     String folderName = server.getWorldPath(LevelResource.ROOT).toFile().getCanonicalFile().getName();
-                    System.out.println("Unique Level folder name: " + folderName);
+                    LOGGER.debug("Unique Level folder name: {}", folderName);
                     return folderName;
                 } catch (Exception e) {
-                    System.out.println("Failed to resolve unique folder name: " + e.getMessage());
+                    LOGGER.warn("Failed to resolve unique folder name: {}", e.getMessage());
                     // Fallback to the level name if canonical path resolution fails
-                    System.out.println("World Save Path ID: " + LevelResource.ROOT.id());
+                    LOGGER.debug("World Save Path ID: {}", LevelResource.ROOT.id());
                     return server.getWorldData().getLevelName();
                 }
             }
-        } else if (!client.isSingleplayer()) {
-            System.out.println("Client is in multiplayer");
+        } else {
+            LOGGER.debug("Client is in multiplayer");
             if (client.getCurrentServer() != null) {
                 return client.getCurrentServer().name;
             }
@@ -97,6 +104,7 @@ public class WorldUtils {
      */
     @NotNull
     public static String getWorldName() {
+        Minecraft client = client();
         if (client.level == null) {
             return "MENU";
         }
@@ -119,6 +127,7 @@ public class WorldUtils {
      */
     @NotNull
     public static String getDimension() {
+        Minecraft client = client();
         if (client.level != null) {
             String dimension = client.level.dimension().identifier().toString();
             return dimension.replace("minecraft:", "").replace("minecraft_", "");
@@ -132,6 +141,7 @@ public class WorldUtils {
      * @return The number of days as a {@code long}, or 0.
      */
     public static long getDaysPlayed() {
+        Minecraft client = client();
         if (client.level != null) {
             return client.level.getOverworldClockTime() / 24000L;
         }
@@ -145,6 +155,7 @@ public class WorldUtils {
      */
     @NotNull
     public static String getDifficulty() {
+        Minecraft client = client();
         if (client.level != null) {
             String name = client.level.getDifficulty().getSerializedName();
             return name.substring(0, 1).toUpperCase() + name.substring(1);
@@ -159,7 +170,7 @@ public class WorldUtils {
      */
     @NotNull
     public static String getVersion() {
-        return client.getLaunchedVersion();
+        return client().getLaunchedVersion();
     }
 
     /**
@@ -169,6 +180,7 @@ public class WorldUtils {
      */
     @NotNull
     public static String getGameMode() {
+        Minecraft client = client();
         if (client.gameMode != null && client.gameMode.getPlayerMode() != null) {
             String name = client.gameMode.getPlayerMode().name().toLowerCase();
             return name.substring(0, 1).toUpperCase() + name.substring(1);

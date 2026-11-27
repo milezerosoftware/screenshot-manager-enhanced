@@ -21,6 +21,11 @@ public class ScreenUtils {
         }
     }
 
+    public static Screen getCurrentScreen() {
+        Minecraft client = Minecraft.getInstance();
+        return client != null && client.gui != null ? client.gui.screen() : null;
+    }
+
     public static ToastManager getToastManager() {
         Minecraft client = Minecraft.getInstance();
         return client != null && client.gui != null ? client.gui.toastManager() : null;

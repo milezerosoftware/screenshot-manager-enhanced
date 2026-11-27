@@ -264,4 +264,27 @@ public class ScreenshotPathGeneratorTest {
         // With null date, should fall back to world dir only (date level is skipped)
         assertEquals(new File(screenshotsDir, "Test_World_1"), result);
     }
+
+    // --- Null Dimension Tests ---
+
+    @Test
+    public void testNullDimensionHandling() {
+        ModConfig config = new ModConfig();
+        config.groupingMode = GroupingMode.WORLD;
+
+        File worldResult = ScreenshotPathGenerator.getScreenshotDirectory(screenshotsDir, config, rawWorldId,
+                safeWorldId, null, date);
+        assertEquals(new File(screenshotsDir, "Test_World_1"), worldResult);
+
+        config.groupingMode = GroupingMode.WORLD_DIMENSION;
+        File worldDimResult = ScreenshotPathGenerator.getScreenshotDirectory(screenshotsDir, config, rawWorldId,
+                safeWorldId, null, date);
+        assertEquals(new File(new File(screenshotsDir, "Test_World_1"), ""), worldDimResult);
+
+        config.groupingMode = GroupingMode.WORLD_DIMENSION_DATE;
+        File worldDimDateResult = ScreenshotPathGenerator.getScreenshotDirectory(screenshotsDir, config, rawWorldId,
+                safeWorldId, null, date);
+        assertEquals(new File(new File(new File(screenshotsDir, "Test_World_1"), ""), "2025-01-01"),
+                worldDimDateResult);
+    }
 }

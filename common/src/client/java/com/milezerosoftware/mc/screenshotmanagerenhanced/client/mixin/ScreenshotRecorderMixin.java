@@ -34,10 +34,6 @@ import java.util.Date;
 @Mixin(Screenshot.class)
 public class ScreenshotRecorderMixin {
 
-    private static final int FILE_POLL_INTERVAL_MS = 100;
-    private static final int FILE_POLL_MAX_ATTEMPTS = 100;
-    private static final int FILE_WRITE_DELAY_MS = 200;
-
     /**
      * Intercepts screenshot filename generation to provide custom paths and
      * metadata embedding.
@@ -53,8 +49,7 @@ public class ScreenshotRecorderMixin {
      * </p>
      * <ol>
      * <li>Collects metadata from the current game state (on Render thread)</li>
-     * <li>Spawns a daemon thread to wait for the file to be written</li>
-     * <li>Triggers async metadata embedding once the file exists</li>
+     * <li>Submits an async task to wait for file stability and embed metadata</li>
      * </ol>
      *
      * @param gameDir The game directory (usually .minecraft)
@@ -116,28 +111,7 @@ public class ScreenshotRecorderMixin {
         var metadata = com.milezerosoftware.mc.screenshotmanagerenhanced.client.util.ScreenshotMetadataCollector
                 .collect();
 
-        // Start async thread that waits for file to exist, then writes metadata
-        Thread writerThread = new Thread(() -> {
-            try {
-                // Wait for file to exist (poll every 100ms, timeout after 10 seconds)
-                int attempts = 0;
-                while (!targetFile.exists() && attempts < FILE_POLL_MAX_ATTEMPTS) {
-                    Thread.sleep(FILE_POLL_INTERVAL_MS);
-                    attempts++;
-                }
-
-                if (targetFile.exists()) {
-                    // Small delay to ensure file is fully written
-                    Thread.sleep(FILE_WRITE_DELAY_MS);
-                    com.milezerosoftware.mc.screenshotmanagerenhanced.client.util.MetadataHandler
-                            .writeMetadataAsync(targetFile, metadata);
-                }
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-        }, "ScreenshotFileWatcher");
-
-        writerThread.setDaemon(true);
-        writerThread.start();
+        com.milezerosoftware.mc.screenshotmanagerenhanced.client.util.MetadataHandler
+                .writeMetadataAsync(targetFile, metadata);
     }
 }

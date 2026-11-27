@@ -70,6 +70,26 @@ public class ConfigManagerTest {
     }
 
     @Test
+    void testRepeatedMalformedJsonOverwritesBackup() throws IOException {
+        Path configFile = tempDir.resolve("repeated_malformed_config.json");
+        Path backupFile = tempDir.resolve("repeated_malformed_config.json.broken");
+
+        String firstBroken = "{ \"groupingMode\": \"broken_v1\"";
+        Files.writeString(configFile, firstBroken);
+        ConfigManager.load(configFile);
+        assertTrue(Files.exists(backupFile), "First backup file should be created");
+        assertEquals(firstBroken, Files.readString(backupFile));
+
+        String secondBroken = "{ \"groupingMode\": \"broken_v2\"";
+        Files.writeString(configFile, secondBroken);
+        ConfigManager.load(configFile);
+        assertTrue(Files.exists(backupFile), "Backup file should still exist after second malformed load");
+        assertEquals(secondBroken, Files.readString(backupFile),
+                "Second malformed load should overwrite existing .broken backup");
+        assertNotNull(ConfigManager.getInstance(), "Config should fall back to defaults");
+    }
+
+    @Test
     void testEmptyFile() throws IOException {
         Path configFile = tempDir.resolve("empty_config.json");
         Files.createFile(configFile); // Create 0-byte file
