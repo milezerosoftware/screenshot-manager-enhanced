@@ -17,6 +17,7 @@ import dev.isxander.yacl3.api.YetAnotherConfigLib;
 import dev.isxander.yacl3.api.controller.BooleanControllerBuilder;
 import dev.isxander.yacl3.api.controller.EnumControllerBuilder;
 import dev.isxander.yacl3.api.controller.StringControllerBuilder;
+import dev.isxander.yacl3.gui.SearchFieldWidget;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.fabricmc.loader.api.FabricLoader;
@@ -172,6 +173,12 @@ public class ModMenuIntegration implements ModMenuApi {
         return YetAnotherConfigLib.createBuilder()
                 .title(Component.literal("Screenshot Manager Enhanced Settings"))
                 .category(smeSettingsCategory)
+                .screenInit(yaclScreen -> yaclScreen.children().forEach(child -> {
+                    if (child instanceof SearchFieldWidget searchField) {
+                        searchField.setVisible(false);
+                        searchField.active = false;
+                    }
+                }))
                 .save(() -> {
                     ConfigScreenLogic.SaveOutcome outcome = ConfigScreenLogic.applySaveState(
                             currentConfig,
