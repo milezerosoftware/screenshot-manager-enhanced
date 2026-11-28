@@ -16,6 +16,8 @@ on:
       - "settings.gradle"
       - ".github/workflows/build.yml"
   push:
+    branches:
+      - main
     paths:
       - "common/**"
       - "fabric/**"
@@ -25,6 +27,10 @@ on:
       - "gradle.properties"
       - "settings.gradle"
       - ".github/workflows/build.yml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   get-versions:
@@ -81,6 +87,8 @@ jobs:
         with:
           java-version: ${{ steps.java-version.outputs.version }}
           distribution: 'microsoft'
+      - name: setup gradle
+        uses: gradle/actions/setup-gradle@v4
       - name: make gradle wrapper executable
         run: chmod +x ./gradlew
       - name: test
