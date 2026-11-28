@@ -5,6 +5,38 @@ All notable changes to Screenshot Manager Enhanced will be documented in this fi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2026-11-27
+
+### Added
+
+- **Gallery Metadata Inspector (#65)**: Added a toggleable **Info** panel (`I` key or Info button) in the single-image viewer (`SingleImageScreen`) displaying embedded Minecraft XMP metadata (World, Dimension, Biome, Coordinates with one-click Copy, Difficulty, Days Played, World Age, MC Version, Player, Game Mode) and file details (Resolution, File Size, Modified timestamp) with async streaming PNG chunk reading and responsive side-by-side / overlay layouts
+- **Gallery Keyboard Navigation (#63)**: Added full keyboard navigation across the gallery grid (`Arrow` keys, `PageUp`/`PageDown`, `Enter` to open) and single-image view (`Left`/`Right` arrows), with gold selection outlines, automatic scroll-into-view, and preserved selection/page state on return
+- **Gallery Pagination**: Added paginated gallery browsing (`24`, `36`, or `48` images per page depending on `3`, `6`, or `8` column layout) with `< Prev` / `Next >` controls and total image counts
+- **Unified YACL Configuration Screen (#61)**: Replaced the legacy Cloth Config screens with a unified **YetAnotherConfigLib (YACL)** `SME Settings` screen accessible via Mod Menu, featuring live Grouping Mode folder path previews, Metadata embedding toggle, and Custom Save Location validation
+- **Modrinth Sandbox & Draft Support**: Added Modrinth staging sandbox (`MODRINTH_STAGING`), draft upload mode (`MODRINTH_DRAFT`), Base62 project ID resolution, and OpenAPI schema compliance to release publishing
+
+### Changed
+
+- **Configuration Library Migration (#61)**: Migrated configuration UI dependencies from Cloth Config API to YetAnotherConfigLib (YACL) across Minecraft `1.21.11`, `26.1.2`, and `26.2`
+- **Gallery Performance & Texture Caching**: Refactored `ScreenshotTextureManager` with a bounded LRU GPU texture cache, bounded worker pool, frame-budgeted uploads, generation-based request cancellation, aspect-ratio-preserving thumbnail sizing, and adjacent image prefetching
+- **Async Scanning & Safe Clipboard I/O**: Added single-pass `GalleryDirectoryScanner` (`O(N)` attribute reads, newest-first sorting) and moved single-image file deletion and clipboard operations off the render thread with argument-safe command invocation
+- **Version Baseline Enforcement**: Added fail-fast validation in `settings.gradle` for Minecraft targets below the `1.21.11` baseline
+
+### Fixed
+
+- **Minecraft 26.2 Screen Compatibility**: Routed active screen and toast/clipboard checks through version-specific `ScreenUtils` bridges
+- **Metadata Embedding Reliability**: Hardened `MetadataHandler` file-stability polling and atomic temp-file replacement
+- **Modrinth Release Uploads**: Fixed Base62 project ID resolution and CreatableVersion OpenAPI payload formatting in `publishRelease`
+
+### Internal & Development
+
+- Consolidated `ModMenuIntegration` into shared `common/src/client/java/` and removed duplicate version-specific config screens (`java-21`, `java-26`, `java-26-2`) and `MetadataTask`
+- Added JUnit 5 unit tests covering gallery navigation, directory scanning, metadata parsing/formatting, config screen logic, LRU thumbnail cache, sizing, clipboard command building, metadata handling, and release helpers
+- Added Gradle dependency caching and PR concurrency deduplication to `.github/workflows/build.yml`
+- Updated `RELEASE.md` with `.env`, staging sandbox, and resumable release documentation
+
+---
+
 ## [2.1.0] - 2026-09-26
 
 ### Added
