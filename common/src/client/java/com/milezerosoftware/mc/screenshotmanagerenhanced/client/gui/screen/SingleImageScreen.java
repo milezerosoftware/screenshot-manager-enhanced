@@ -3,14 +3,17 @@ package com.milezerosoftware.mc.screenshotmanagerenhanced.client.gui.screen;
 import com.milezerosoftware.mc.screenshotmanagerenhanced.client.render.ScreenshotTextureManager;
 import com.milezerosoftware.mc.screenshotmanagerenhanced.client.util.ClipboardUtil;
 import com.milezerosoftware.mc.screenshotmanagerenhanced.client.util.GalleryDirectoryScanner;
+import com.milezerosoftware.mc.screenshotmanagerenhanced.client.util.GalleryNavigation;
 import com.milezerosoftware.mc.screenshotmanagerenhanced.client.util.ScreenUtils;
 import io.wispforest.owo.ui.base.BaseOwoScreen;
 import io.wispforest.owo.ui.component.*;
 import io.wispforest.owo.ui.container.*;
 import io.wispforest.owo.ui.core.*;
+import io.wispforest.owo.ui.inject.GreedyInputUIComponent;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.components.toasts.SystemToast;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import org.jetbrains.annotations.NotNull;
@@ -134,7 +137,8 @@ public class SingleImageScreen extends BaseOwoScreen<FlowLayout> {
         // Back
         leftGroup.child(UIComponents.button(Component.literal("Back"), b -> {
             this.navigatingToGallery = true;
-            ScreenUtils.setScreen(new GalleryScreen(this.parent, this.galleryDir));
+            int returnIndex = images.isEmpty() ? -1 : this.currentIndex;
+            ScreenUtils.setScreen(new GalleryScreen(this.parent, this.galleryDir, returnIndex));
         }).sizing(Sizing.fixed(actionBtnWidth), Sizing.fixed(btnHeight)));
 
         // Copy
@@ -174,10 +178,7 @@ public class SingleImageScreen extends BaseOwoScreen<FlowLayout> {
 
         // Prev (Skip Backward)
         var prevBtn = UIComponents.button(Component.literal("⏮"), b -> {
-            if (currentIndex > 0) {
-                currentIndex--;
-                rebuild();
-            }
+            navigateBy(-1);
         });
         prevBtn.sizing(Sizing.fixed(navBtnWidth), Sizing.fixed(btnHeight));
         prevBtn.active = currentIndex > 0;
@@ -185,10 +186,7 @@ public class SingleImageScreen extends BaseOwoScreen<FlowLayout> {
 
         // Next (Skip Forward)
         var nextBtn = UIComponents.button(Component.literal("⏭"), b -> {
-            if (currentIndex < images.size() - 1) {
-                currentIndex++;
-                rebuild();
-            }
+            navigateBy(1);
         });
         nextBtn.sizing(Sizing.fixed(navBtnWidth), Sizing.fixed(btnHeight));
         nextBtn.active = currentIndex < images.size() - 1;
@@ -201,7 +199,58 @@ public class SingleImageScreen extends BaseOwoScreen<FlowLayout> {
         root.child(footer);
     }
 
+    private void navigateBy(int delta) {
+        if (deleting || images.isEmpty()) {
+            return;
+        }
+        int nextIndex = GalleryNavigation.moveSingleImageIndex(currentIndex, delta, images.size());
+        if (nextIndex >= 0 && nextIndex != currentIndex) {
+            currentIndex = nextIndex;
+            rebuild();
+        }
+    }
+
+    @Override
+    public boolean keyPressed(KeyEvent input) {
+        if (this.uiAdapter == null) {
+            return super.keyPressed(input);
+        }
+
+        var focusHandler = this.uiAdapter.rootComponent.focusHandler();
+        UIComponent focused = focusHandler != null ? focusHandler.focused() : null;
+        if (focused instanceof GreedyInputUIComponent || input.hasControlDown() || input.hasAltDown()) {
+            return super.keyPressed(input);
+        }
+
+        if (input.isLeft()) {
+            clearComponentFocus();
+            if (!deleting) {
+                navigateBy(-1);
+            }
+            return true;
+        }
+        if (input.isRight()) {
+            clearComponentFocus();
+            if (!deleting) {
+                navigateBy(1);
+            }
+            return true;
+        }
+
+        return super.keyPressed(input);
+    }
+
+    private void clearComponentFocus() {
+        if (this.uiAdapter != null) {
+            var focusHandler = this.uiAdapter.rootComponent.focusHandler();
+            if (focusHandler != null) {
+                focusHandler.focus(null, null);
+            }
+        }
+    }
+
     private void rebuild() {
+        clearComponentFocus();
         ScreenshotTextureManager.cancelPending();
         this.uiAdapter.rootComponent.clearChildren();
         build(this.uiAdapter.rootComponent);
@@ -264,7 +313,8 @@ public class SingleImageScreen extends BaseOwoScreen<FlowLayout> {
     public void onClose() {
         if (parent != null) {
             this.navigatingToGallery = true;
-            ScreenUtils.setScreen(this.minecraft, new GalleryScreen(this.parent, this.galleryDir));
+            int returnIndex = images.isEmpty() ? -1 : this.currentIndex;
+            ScreenUtils.setScreen(this.minecraft, new GalleryScreen(this.parent, this.galleryDir, returnIndex));
         } else {
             super.onClose();
         }
