@@ -9,7 +9,7 @@ import com.milezerosoftware.mc.screenshotmanagerenhanced.client.util.FilePickerH
  */
 public final class ConfigScreenLogic {
 
-    private static final String SAMPLE_WORLD = "My_Survival_World";
+    private static final String SAMPLE_WORLD = "My_World";
     private static final String SAMPLE_DIMENSION = "the_nether";
     private static final String SAMPLE_DATE = "2026-01-30";
     private static final String SAMPLE_FILENAME = "2026-01-30_14.22.05.png";
@@ -46,26 +46,49 @@ public final class ConfigScreenLogic {
     }
 
     /**
-     * Builds a clean example screenshot path for the given {@link GroupingMode}
-     * and base directory.
+     * Returns a concise human-readable description for the given {@link GroupingMode}.
      */
-    public static String buildExamplePath(GroupingMode mode, String basePath) {
+    public static String getGroupingModeDescription(GroupingMode mode) {
+        GroupingMode effectiveMode = mode != null ? mode : GroupingMode.WORLD;
+        return switch (effectiveMode) {
+            case WORLD -> "Groups screenshots into a folder per world or server.";
+            case DATE -> "Groups screenshots into a folder per date (yyyy-MM-dd).";
+            case WORLD_DIMENSION -> "Groups screenshots by world/server, then dimension.";
+            case WORLD_DATE -> "Groups screenshots by world/server, then date.";
+            case WORLD_DIMENSION_DATE -> "Groups screenshots by world/server, dimension, then date.";
+            case WORLD_DATE_DIMENSION -> "Groups screenshots by world/server, date, then dimension.";
+            case NONE -> "Standard Minecraft behavior — saves directly in the screenshots folder.";
+        };
+    }
+
+    /**
+     * Builds a concise example folder path (trailing slash, no filename) for the
+     * given {@link GroupingMode} and base directory so it displays cleanly without
+     * awkward line wrapping in narrow inspector panels.
+     */
+    public static String buildExampleFolder(GroupingMode mode, String basePath) {
         String normalizedBase = normalizeBasePath(basePath);
         GroupingMode effectiveMode = mode != null ? mode : GroupingMode.WORLD;
 
         return switch (effectiveMode) {
-            case WORLD -> normalizedBase + "/" + SAMPLE_WORLD + "/" + SAMPLE_FILENAME;
-            case DATE -> normalizedBase + "/" + SAMPLE_DATE + "/" + SAMPLE_FILENAME;
-            case WORLD_DIMENSION -> normalizedBase + "/" + SAMPLE_WORLD + "/" + SAMPLE_DIMENSION
-                    + "/" + SAMPLE_FILENAME;
-            case WORLD_DATE -> normalizedBase + "/" + SAMPLE_WORLD + "/" + SAMPLE_DATE
-                    + "/" + SAMPLE_FILENAME;
+            case WORLD -> normalizedBase + "/" + SAMPLE_WORLD + "/";
+            case DATE -> normalizedBase + "/" + SAMPLE_DATE + "/";
+            case WORLD_DIMENSION -> normalizedBase + "/" + SAMPLE_WORLD + "/" + SAMPLE_DIMENSION + "/";
+            case WORLD_DATE -> normalizedBase + "/" + SAMPLE_WORLD + "/" + SAMPLE_DATE + "/";
             case WORLD_DIMENSION_DATE -> normalizedBase + "/" + SAMPLE_WORLD + "/" + SAMPLE_DIMENSION
-                    + "/" + SAMPLE_DATE + "/" + SAMPLE_FILENAME;
+                    + "/" + SAMPLE_DATE + "/";
             case WORLD_DATE_DIMENSION -> normalizedBase + "/" + SAMPLE_WORLD + "/" + SAMPLE_DATE
-                    + "/" + SAMPLE_DIMENSION + "/" + SAMPLE_FILENAME;
-            case NONE -> normalizedBase + "/" + SAMPLE_FILENAME;
+                    + "/" + SAMPLE_DIMENSION + "/";
+            case NONE -> normalizedBase + "/";
         };
+    }
+
+    /**
+     * Builds a clean example screenshot path for the given {@link GroupingMode}
+     * and base directory.
+     */
+    public static String buildExamplePath(GroupingMode mode, String basePath) {
+        return buildExampleFolder(mode, basePath) + SAMPLE_FILENAME;
     }
 
     /**

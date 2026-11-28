@@ -45,37 +45,63 @@ class ConfigScreenLogicTest {
         assertFalse(ConfigScreenLogic.needsEntryWarning(nullCustomConfig));
     }
 
-    // --- buildExamplePath ---
+    // --- buildExamplePath & buildExampleFolder & getGroupingModeDescription ---
 
     @Test
     void buildExamplePathCoversAllSevenGroupingModes() {
         String base = "/tmp/screenshots";
 
-        assertEquals("/tmp/screenshots/My_Survival_World/2026-01-30_14.22.05.png",
+        assertEquals("/tmp/screenshots/My_World/2026-01-30_14.22.05.png",
                 ConfigScreenLogic.buildExamplePath(GroupingMode.WORLD, base));
         assertEquals("/tmp/screenshots/2026-01-30/2026-01-30_14.22.05.png",
                 ConfigScreenLogic.buildExamplePath(GroupingMode.DATE, base));
-        assertEquals("/tmp/screenshots/My_Survival_World/the_nether/2026-01-30_14.22.05.png",
+        assertEquals("/tmp/screenshots/My_World/the_nether/2026-01-30_14.22.05.png",
                 ConfigScreenLogic.buildExamplePath(GroupingMode.WORLD_DIMENSION, base));
-        assertEquals("/tmp/screenshots/My_Survival_World/2026-01-30/2026-01-30_14.22.05.png",
+        assertEquals("/tmp/screenshots/My_World/2026-01-30/2026-01-30_14.22.05.png",
                 ConfigScreenLogic.buildExamplePath(GroupingMode.WORLD_DATE, base));
-        assertEquals("/tmp/screenshots/My_Survival_World/the_nether/2026-01-30/2026-01-30_14.22.05.png",
+        assertEquals("/tmp/screenshots/My_World/the_nether/2026-01-30/2026-01-30_14.22.05.png",
                 ConfigScreenLogic.buildExamplePath(GroupingMode.WORLD_DIMENSION_DATE, base));
-        assertEquals("/tmp/screenshots/My_Survival_World/2026-01-30/the_nether/2026-01-30_14.22.05.png",
+        assertEquals("/tmp/screenshots/My_World/2026-01-30/the_nether/2026-01-30_14.22.05.png",
                 ConfigScreenLogic.buildExamplePath(GroupingMode.WORLD_DATE_DIMENSION, base));
         assertEquals("/tmp/screenshots/2026-01-30_14.22.05.png",
                 ConfigScreenLogic.buildExamplePath(GroupingMode.NONE, base));
     }
 
     @Test
+    void buildExampleFolderAndDescriptionCoverAllSevenGroupingModes() {
+        assertEquals("screenshots/My_World/",
+                ConfigScreenLogic.buildExampleFolder(GroupingMode.WORLD, "screenshots"));
+        assertEquals("screenshots/2026-01-30/",
+                ConfigScreenLogic.buildExampleFolder(GroupingMode.DATE, "screenshots"));
+        assertEquals("screenshots/My_World/the_nether/",
+                ConfigScreenLogic.buildExampleFolder(GroupingMode.WORLD_DIMENSION, "screenshots"));
+        assertEquals("screenshots/My_World/2026-01-30/",
+                ConfigScreenLogic.buildExampleFolder(GroupingMode.WORLD_DATE, "screenshots"));
+        assertEquals("screenshots/My_World/the_nether/2026-01-30/",
+                ConfigScreenLogic.buildExampleFolder(GroupingMode.WORLD_DIMENSION_DATE, "screenshots"));
+        assertEquals("screenshots/My_World/2026-01-30/the_nether/",
+                ConfigScreenLogic.buildExampleFolder(GroupingMode.WORLD_DATE_DIMENSION, "screenshots"));
+        assertEquals("screenshots/",
+                ConfigScreenLogic.buildExampleFolder(GroupingMode.NONE, "screenshots"));
+
+        for (GroupingMode mode : GroupingMode.values()) {
+            String desc = ConfigScreenLogic.getGroupingModeDescription(mode);
+            assertNotNull(desc);
+            assertFalse(desc.isBlank());
+        }
+        assertEquals(ConfigScreenLogic.getGroupingModeDescription(GroupingMode.WORLD),
+                ConfigScreenLogic.getGroupingModeDescription(null));
+    }
+
+    @Test
     void buildExamplePathNormalizesBasePathAndNullMode() {
-        assertEquals("screenshots/My_Survival_World/2026-01-30_14.22.05.png",
+        assertEquals("screenshots/My_World/2026-01-30_14.22.05.png",
                 ConfigScreenLogic.buildExamplePath(GroupingMode.WORLD, null));
-        assertEquals("screenshots/My_Survival_World/2026-01-30_14.22.05.png",
+        assertEquals("screenshots/My_World/2026-01-30_14.22.05.png",
                 ConfigScreenLogic.buildExamplePath(GroupingMode.WORLD, "   "));
         assertEquals("/custom/dir/2026-01-30_14.22.05.png",
                 ConfigScreenLogic.buildExamplePath(GroupingMode.NONE, "/custom/dir///"));
-        assertEquals("screenshots/My_Survival_World/2026-01-30_14.22.05.png",
+        assertEquals("screenshots/My_World/2026-01-30_14.22.05.png",
                 ConfigScreenLogic.buildExamplePath(null, "screenshots"));
     }
 

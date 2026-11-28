@@ -1,5 +1,6 @@
 package com.milezerosoftware.mc.screenshotmanagerenhanced.client.compat;
 
+import com.milezerosoftware.mc.screenshotmanagerenhanced.client.util.FilePickerHelper;
 import com.milezerosoftware.mc.screenshotmanagerenhanced.client.util.ScreenUtils;
 import com.milezerosoftware.mc.screenshotmanagerenhanced.config.ConfigManager;
 import com.milezerosoftware.mc.screenshotmanagerenhanced.config.ConfigScreenLogic;
@@ -9,7 +10,6 @@ import com.milezerosoftware.mc.screenshotmanagerenhanced.config.ModConfig;
 import com.terraformersmc.modmenu.api.ConfigScreenFactory;
 import com.terraformersmc.modmenu.api.ModMenuApi;
 import dev.isxander.yacl3.api.ConfigCategory;
-import dev.isxander.yacl3.api.LabelOption;
 import dev.isxander.yacl3.api.Option;
 import dev.isxander.yacl3.api.OptionDescription;
 import dev.isxander.yacl3.api.OptionGroup;
@@ -27,7 +27,6 @@ import net.minecraft.client.gui.components.toasts.ToastManager;
 import net.minecraft.client.gui.screens.ConfirmScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.MutableComponent;
 
 import java.nio.file.Path;
 import java.util.concurrent.CompletableFuture;
@@ -94,12 +93,11 @@ public class ModMenuIntegration implements ModMenuApi {
                 .tooltip(Component.literal("General screenshot organization settings"))
                 .option(Option.<GroupingMode>createBuilder()
                         .name(Component.literal("Grouping Mode").withStyle(ChatFormatting.GOLD))
-                        .description(OptionDescription.of(
-                                Component.literal("Select how screenshots are organized into subfolders."),
-                                Component.literal("Example: ").withStyle(ChatFormatting.GOLD)
-                                        .append(Component.literal(ConfigScreenLogic.buildExamplePath(
-                                                pendingGroupingMode.get(), displayBase))
-                                                .withStyle(ChatFormatting.GRAY))))
+                        .description(mode -> OptionDescription.of(
+                                Component.literal(ConfigScreenLogic.getGroupingModeDescription(mode)),
+                                Component.literal("\nFolder Example:").withStyle(ChatFormatting.GOLD),
+                                Component.literal(ConfigScreenLogic.buildExampleFolder(mode, displayBase))
+                                        .withStyle(ChatFormatting.AQUA)))
                         .binding(
                                 GroupingMode.WORLD,
                                 pendingGroupingMode::get,
@@ -107,13 +105,6 @@ public class ModMenuIntegration implements ModMenuApi {
                         .controller(opt -> EnumControllerBuilder.create(opt)
                                 .enumClass(GroupingMode.class)
                                 .formatValue(mode -> Component.literal(mode.toString())))
-                        .build())
-                .group(OptionGroup.createBuilder()
-                        .name(Component.literal("Grouping Mode Guide").withStyle(ChatFormatting.GOLD))
-                        .description(OptionDescription.of(
-                                Component.literal("Click to view folder structure examples for all grouping modes.")))
-                        .collapsed(true)
-                        .option(LabelOption.create(buildGroupingGuideComponent()))
                         .build())
                 .build();
 
@@ -162,12 +153,19 @@ public class ModMenuIntegration implements ModMenuApi {
                                 .build())
                         .option(Option.<String>createBuilder()
                                 .name(Component.literal("Screenshot Save Location"))
-                                .description(OptionDescription.of(
-                                        Component.literal(
-                                                "Copy and paste an absolute directory path. The directory must exist and be writable."),
-                                        Component.literal("Current Path: ").withStyle(ChatFormatting.GOLD)
-                                                .append(Component.literal(initialCustomPath)
-                                                        .withStyle(ChatFormatting.AQUA))))
+                                .description(pathValue -> {
+                                    FilePickerHelper.ValidationResult validation = FilePickerHelper
+                                            .validateDirectory(pathValue);
+                                    Component statusLine = validation.isValid
+                                            ? Component.literal("Status: Valid writable directory")
+                                                    .withStyle(ChatFormatting.GREEN)
+                                            : Component.literal("Status: " + validation.errorMessage)
+                                                    .withStyle(ChatFormatting.RED);
+                                    return OptionDescription.of(
+                                            Component.literal(
+                                                    "Enter an absolute directory path. The directory must exist and be writable."),
+                                            statusLine);
+                                })
                                 .binding(
                                         defaultPathStr,
                                         pendingCustomPath::get,
@@ -264,29 +262,6 @@ public class ModMenuIntegration implements ModMenuApi {
                                 + "screenshots may be overwritten.\n\n")
                         .withStyle(ChatFormatting.WHITE))
                 .append(Component.literal("Do you want to enable this feature?")
-                        .withStyle(ChatFormatting.GRAY));
-    }
-
-    private static Component buildGroupingGuideComponent() {
-        MutableComponent guide = Component.literal("Grouping Modes").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD)
-                .append(Component.literal(" organize screenshots into folders:\n\n")
-                        .withStyle(ChatFormatting.WHITE));
-
-        appendGuideLine(guide, GroupingMode.WORLD, "Groups by world/server name");
-        appendGuideLine(guide, GroupingMode.DATE, "Groups by date (yyyy-MM-dd)");
-        appendGuideLine(guide, GroupingMode.WORLD_DIMENSION, "World, then dimension");
-        appendGuideLine(guide, GroupingMode.WORLD_DATE, "World, then date");
-        appendGuideLine(guide, GroupingMode.WORLD_DIMENSION_DATE, "World, dimension, then date");
-        appendGuideLine(guide, GroupingMode.WORLD_DATE_DIMENSION, "World, date, then dimension");
-        appendGuideLine(guide, GroupingMode.NONE, "Standard Minecraft behavior (no subfolders)");
-
-        return guide;
-    }
-
-    private static void appendGuideLine(MutableComponent guide, GroupingMode mode, String description) {
-        guide.append(Component.literal(mode.name()).withStyle(ChatFormatting.AQUA))
-                .append(Component.literal(" - " + description + "\n").withStyle(ChatFormatting.WHITE))
-                .append(Component.literal("  Example: " + ConfigScreenLogic.buildExamplePath(mode, "screenshots") + "\n\n")
                         .withStyle(ChatFormatting.GRAY));
     }
 }
