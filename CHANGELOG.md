@@ -5,6 +5,18 @@ All notable changes to Screenshot Manager Enhanced will be documented in this fi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Add Minecraft 26.3 support using adaptive ScreenUtils bridge and updated dependencies (Fabric API 0.161.0+26.3, Cloth Config 26.3.159, ModMenu 21.0.0)
+
+### Internal & Development
+
+- Add adaptive `ScreenUtils.openPath` fallback across client version bridges (Blaze3D / Util.Platform / Desktop)
+
+---
+
 ## [2.1.0] - 2026-09-26
 
 ### Added

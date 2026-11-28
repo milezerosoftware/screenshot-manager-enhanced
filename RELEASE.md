@@ -173,21 +173,48 @@ If a release fails midway (for instance, network timeout or API error during Mod
 
 ## Adding a New Minecraft Version
 
-Before creating a release that includes a new Minecraft version (e.g., `26.2`):
+When a new Minecraft version is released, follow this structured process before creating a release:
 
-1. **Create Properties File**: Add `versionProperties/<mc_ver>.properties` defining dependencies (`fabric_version`, `loader_version`, `cloth_config_version`, `modmenu_version`, `owo_version`, `java_version`, and `ui_version`).
-2. **Version Bridges**: If the new MC version has API changes, provide the appropriate version-specific implementations (under `common/src/client/java-<ui_version>/`).
-3. **Verify Locally**:
-   ```bash
-   # Run tests for the version
-   ./gradlew :common:test -Pmc_ver=<mc_ver> --no-daemon
+### 1. Dependency Readiness Audit (Pre-flight Gate)
 
-   # Build fabric artifact
-   ./gradlew :fabric:build -Pmc_ver=<mc_ver> --no-daemon
+Before writing any code or modifying configuration, verify that **all five core dependencies** have officially published releases supporting the target Minecraft version:
 
-   # Verify all configured versions build together
-   ./gradlew buildAllFabric --no-daemon
-   ```
+| Dependency | Repository / Provider | Verification Check |
+|---|---|---|
+| **Fabric Loader** | [Fabric Meta](https://meta.fabricmc.net/) | Check `https://meta.fabricmc.net/v2/versions/loader/<mc_ver>` |
+| **Fabric API** | [Fabric Maven](https://maven.fabricmc.net/) | Check `maven-metadata.xml` for `0.x.x+<mc_ver>` |
+| **Cloth Config** | [Shedaniel Maven](https://maven.shedaniel.me/) | Check `cloth-config-fabric` for `<mc_ver>.x` build |
+| **ModMenu** | [TerraformersMC Maven](https://maven.terraformersmc.com/) | Check `modmenu` releases for `<mc_ver>` |
+| **owo-lib** | [Wisp Forest Maven](https://maven.wispforest.io/) | Check `owo-lib` for an artifact compiled against `<mc_ver>` |
+
+> [!IMPORTANT]
+> **Dependency Gate:** If *any* required dependency (particularly `owo-lib`) has not yet published an official release specifically supporting the target Minecraft version, **do not proceed with the upgrade**. Keep the upgrade branch in draft/on-hold until all supporting libraries are available.
+
+---
+
+### 2. Properties & Bridge Configuration
+
+1. **Create Properties File:** Add `versionProperties/<mc_ver>.properties` declaring the exact dependencies and metadata.
+2. **Bridge Reusability Policy:**
+   - **Do not create redundant bridge files.** If the vanilla Minecraft APIs and library contracts haven't changed, reuse an existing bridge by pointing `ui_version` to the existing directory (e.g., `ui_version=26-2` or `ui_version=legacy`).
+   - If minor vanilla API refactors occur (e.g. method moves), prefer **adaptive runtime resolution** in existing bridge helpers (`ScreenUtils`) to preserve cross-version compatibility without duplicating source trees.
+
+---
+
+### 3. Local Verification & Multi-Target Build
+
+Run automated tests and verify that both the new version and all existing active versions compile cleanly:
+
+```bash
+# 1. Run unit tests for the new target version
+./gradlew :common:test -Pmc_ver=<mc_ver> --no-daemon
+
+# 2. Build the Fabric artifact for the new version
+./gradlew :fabric:build -Pmc_ver=<mc_ver> --no-daemon
+
+# 3. Verify all configured versions build cleanly together
+./gradlew buildAllFabric --no-daemon
+```
 
 ---
 

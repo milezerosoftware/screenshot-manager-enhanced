@@ -100,7 +100,7 @@ We welcome contributions!
 1. **Fork the Repository**
 2. **Clone**: `git clone https://github.com/milezerosoftware/screenshot-manager-enhanced.git`
 3. **Make Changes**: Core logic resides in `common/`. Loader-specific code is in `fabric/`.
-4. **Test**: Run unit tests with `./gradlew :common:test -Pmc_ver=26.2` or run client locally with `./gradlew :fabric:runClient -Pmc_ver=26.2`.
+4. **Test**: Run unit tests with `./gradlew :common:test -Pmc_ver=26.3` or run client locally with `./gradlew :fabric:runClient -Pmc_ver=26.3`.
 5. **Pull Request**: Submit a PR targeting `main` with a clear description of your changes.
 
 Please report any bugs or feature requests on the [Issue Tracker](https://github.com/milezerosoftware/screenshot-manager-enhanced/issues).
@@ -123,7 +123,7 @@ Run unit tests across common components:
 
 ```bash
 # Run tests for specific MC version
-./gradlew :common:test -Pmc_ver=26.2
+./gradlew :common:test -Pmc_ver=26.3
 
 # Or against Java 21 baseline target
 ./gradlew :common:test -Pmc_ver=1.21.11
@@ -134,15 +134,15 @@ Run unit tests across common components:
 To build or run for a specific Minecraft version, pass the `-Pmc_ver` property:
 
 ```bash
-# Build Fabric for MC 26.2
-./gradlew :fabric:build -Pmc_ver=26.2
+# Build Fabric for MC 26.3
+./gradlew :fabric:build -Pmc_ver=26.3
 
-# Run client for testing in MC 26.2
-./gradlew :fabric:runClient -Pmc_ver=26.2
+# Run client for testing in MC 26.3
+./gradlew :fabric:runClient -Pmc_ver=26.3
 ```
 
 > [!NOTE]
-> Supported Minecraft versions are defined dynamically by property files in `versionProperties/` (e.g. `1.21.11`, `26.1.2`, `26.2`). The build system automatically detects and builds active versions.
+> Supported Minecraft versions are defined dynamically by property files in `versionProperties/` (e.g. `1.21.11`, `26.1.2`, `26.2`, `26.3`). The build system automatically detects and builds active versions.
 
 ## 🚀 Release Process
 
