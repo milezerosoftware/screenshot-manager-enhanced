@@ -440,6 +440,29 @@ public class MetadataHandlerTest {
         assertTrue(modifiedText.contains("Integration Test World"), "Embedded XMP should contain world name");
         assertTrue(modifiedText.contains("overworld"), "Embedded XMP should contain dimension");
         assertTrue(modifiedText.contains("123, 64, -456"), "Embedded XMP should contain coordinates");
+        assertTrue(modifiedText.contains("<mc:PlayerName>Tester</mc:PlayerName>"), "Embedded XMP should contain player name");
+        assertTrue(modifiedText.contains("<mc:GameMode>Survival</mc:GameMode>"), "Embedded XMP should contain game mode");
+    }
+
+    @Test
+    void testBuildXmpXmlOmitsBlankPlayerNameAndGameModeAndHandlesNullSummarySafely() {
+        MetadataHandler.ScreenshotMetadata metadata = new MetadataHandler.ScreenshotMetadata(
+                null,
+                null,
+                null,
+                null,
+                "",
+                "Normal",
+                null,
+                "26.2",
+                "Plains",
+                "1.00 d");
+
+        String xml = MetadataHandler.buildXmpXml(metadata);
+        assertFalse(xml.contains("<mc:PlayerName>"));
+        assertFalse(xml.contains("<mc:GameMode>"));
+        assertFalse(xml.contains("World: null"));
+        assertTrue(xml.contains("World: Unknown | Dim: Unknown | Loc: Unknown | Days Played: Unknown"));
     }
 
     // =====================================================
