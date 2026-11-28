@@ -776,6 +776,7 @@ public class GalleryScreen extends BaseOwoScreen<FlowLayout> {
             ScreenshotTextureManager.cancelPending();
         } else {
             ScreenshotTextureManager.clearCache();
+            SingleImageScreen.clearMetadataCache();
         }
     }
 }

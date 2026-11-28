@@ -96,18 +96,7 @@ public class MetadataHandler {
         }
 
         // Construct XMP XML
-        String xmpXml = new XmpBuilder()
-                .setTitle("Screenshot Manager Enhanced")
-                .setDescription(createSummary(metadata))
-                .addCustomProperty("mc", "WorldTitle", metadata.worldName)
-                .addCustomProperty("mc", "Difficulty", metadata.difficulty)
-                .addCustomProperty("mc", "Version", metadata.minecraftVersion)
-                .addCustomProperty("mc", "Dimension", metadata.dimension)
-                .addCustomProperty("mc", "Biome", metadata.biome)
-                .addCustomProperty("mc", "Coordinates", metadata.coordinates)
-                .addCustomProperty("mc", "Days", metadata.daysPlayed)
-                .addCustomProperty("mc", "WorldAge", metadata.worldAge)
-                .build();
+        String xmpXml = buildXmpXml(metadata);
 
         // Write to temp file with XMP chunk
         File tempFile = new File(file.getParentFile(), file.getName() + ".tmp");
@@ -324,6 +313,32 @@ public class MetadataHandler {
         os.write(value & 0xFF);
     }
 
+    static String buildXmpXml(ScreenshotMetadata metadata) {
+        XmpBuilder builder = new XmpBuilder()
+                .setTitle("Screenshot Manager Enhanced")
+                .setDescription(createSummary(metadata));
+
+        if (metadata != null) {
+            builder.addCustomProperty("mc", "WorldTitle", metadata.worldName)
+                    .addCustomProperty("mc", "Difficulty", metadata.difficulty)
+                    .addCustomProperty("mc", "Version", metadata.minecraftVersion)
+                    .addCustomProperty("mc", "Dimension", metadata.dimension)
+                    .addCustomProperty("mc", "Biome", metadata.biome)
+                    .addCustomProperty("mc", "Coordinates", metadata.coordinates)
+                    .addCustomProperty("mc", "Days", metadata.daysPlayed)
+                    .addCustomProperty("mc", "WorldAge", metadata.worldAge);
+
+            if (metadata.playerName != null && !metadata.playerName.isBlank()) {
+                builder.addCustomProperty("mc", "PlayerName", metadata.playerName);
+            }
+            if (metadata.gameMode != null && !metadata.gameMode.isBlank()) {
+                builder.addCustomProperty("mc", "GameMode", metadata.gameMode);
+            }
+        }
+
+        return builder.build();
+    }
+
     /**
      * Creates a human-readable summary string from metadata.
      *
@@ -331,12 +346,19 @@ public class MetadataHandler {
      * @return A formatted summary string
      */
     private static String createSummary(ScreenshotMetadata metadata) {
+        if (metadata == null) {
+            return "World: Unknown | Dim: Unknown | Loc: Unknown | Days Played: Unknown";
+        }
         return String.format(
                 "World: %s | Dim: %s | Loc: %s | Days Played: %s",
-                metadata.worldName,
-                metadata.dimension,
-                metadata.coordinates,
-                metadata.daysPlayed);
+                safeSummaryValue(metadata.worldName),
+                safeSummaryValue(metadata.dimension),
+                safeSummaryValue(metadata.coordinates),
+                safeSummaryValue(metadata.daysPlayed));
+    }
+
+    private static String safeSummaryValue(String value) {
+        return value != null && !value.isBlank() ? value : "Unknown";
     }
 
     /**

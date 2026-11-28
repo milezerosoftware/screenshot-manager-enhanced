@@ -26,4 +26,14 @@ public class ScreenUtils {
     public static ToastManager getToastManager() {
         return Minecraft.getInstance().getToastManager();
     }
+
+    public static void setClipboard(String text) {
+        if (text == null) {
+            return;
+        }
+        Minecraft client = Minecraft.getInstance();
+        if (client != null && client.keyboardHandler != null) {
+            client.keyboardHandler.setClipboard(text);
+        }
+    }
 }
