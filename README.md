@@ -9,9 +9,9 @@ A mod designed to keep your Minecraft screenshots organized automatically. Say g
 ## ✨ Features
 
 * **Automatic Organization**: Screenshots are instantly sorted into subfolders upon capture.
-* **In-Game Gallery** 📸: Browse, manage, and share your screenshots directly from within Minecraft.
-* **Per-World Configuration**: Customize settings for you single-player or specific server worlds.
-* **In-Game Configuration**: Fully configurable via [Mod Menu](https://modrinth.com/mod/modmenu)
+* **In-Game Gallery** 📸: Browse, inspect metadata, manage, and share your screenshots directly from within Minecraft.
+* **Per-World Configuration**: Customize settings for your single-player or specific server worlds.
+* **In-Game Configuration**: Unified settings UI powered by [YetAnotherConfigLib (YACL)](https://modrinth.com/mod/yacl) and [Mod Menu](https://modrinth.com/mod/modmenu), complete with live folder previews and path validation.
 * **Flexible Grouping Modes**: Customize how you want your folders structured. The mod generates paths based on your current context.
   * **`WORLD`** (Default): Groups screenshots by the world or server name.
     * Example: `screenshots/My_Survival_World/`
@@ -31,24 +31,24 @@ A mod designed to keep your Minecraft screenshots organized automatically. Say g
 
 ### 📸 In-Game Gallery
 
-Manage your moments without leaving the game!
+Manage your moments without leaving the game! Open the gallery directly from the Minecraft Pause Menu (**Gallery 📸**).
 
-* **Browse**: View screenshots in a responsive grid.
-* **Review**: Click any image for a full-screen view.
-* **Organize**: Use the **Copy** button to share or **Delete** to clean up unwanted screenshots.
-* **Navigate**: Cycle through your collection with Next/Previous controls.
+* **Paginated Grid & Folder Browsing**: View screenshots sorted newest-first in a responsive, paginated grid (`3`, `6`, or `8` columns) with aspect-ratio-preserving thumbnails powered by an async LRU texture cache.
+* **Keyboard Navigation**: Navigate thumbnails with `Arrow` keys, jump pages with `PageUp`/`PageDown`, press `Enter` to open the selected screenshot, and use `Left`/`Right` arrows in single-image view. Your selection and page are preserved when returning to the grid.
+* **Metadata Inspector (`I`)**: Toggle the **Info** panel (button or `I` key) in the single-image view to inspect embedded Minecraft metadata (world, dimension, biome, one-click copyable coordinates, difficulty, days played, world age, MC version, player, game mode) alongside image resolution, file size, and modified timestamp.
+* **Organize & Share**: Copy screenshots directly to your clipboard with **Copy**, move unwanted shots to your OS Trash/Recycle Bin with **Delete**, or jump straight to the directory with **Open Folder**.
 
 ### ⚗️ Advanced Features
 
-* **Metadata Support** 🗃️: Automatically embeds rich game details directly into the screenshot file (XMP format). This data travels with the image!
+* **Metadata Support** 🗃️: Automatically embeds rich game details directly into the screenshot file (XMP format). This data travels with the image and can be viewed in-game via the Gallery's **Info** inspector or in external tools!
   * **World Context**: World Name, Dimension, Biome
-  * **Location**: Exact X, Y, Z Coordinates
+  * **Location**: Exact X, Y, Z Coordinates (with one-click copy in the Gallery Inspector)
   * **Time**: In-game Days Played, World Age
-  * **Game State**: Difficulty, Game Mode, Minecraft Version
+  * **Game State**: Difficulty, Game Mode, Player, Minecraft Version
 * **Custom Save Location** 💾: Choose exactly where your screenshots go.
   * Override the default `.minecraft/screenshots` location.
-  * Use any absolute path on your system (e.g., a shared network drive or cloud storage folder).
-  * *Note: Requires enabling advanced settings validation.*
+  * Use any absolute path on your system (e.g., a shared network drive or cloud storage folder) with live directory writability validation.
+  * *Note: Enabling requires acknowledging the world-name conflict warning.*
 
 ## 📥 Installation
 
@@ -67,7 +67,7 @@ For those who prefer the manual route:
 1. **Install Fabric Loader**: Make sure you have the [Fabric Loader](https://fabricmc.net/use/installer/) installed for your version of Minecraft.
 2. **Download Dependencies**: You will need the following mods:
     * [Fabric API](https://modrinth.com/mod/fabric-api)
-    * [Cloth Config API](https://modrinth.com/mod/cloth-config) (Required for configuration screen)
+    * [YetAnotherConfigLib (YACL)](https://modrinth.com/mod/yacl) (Required for configuration screen)
     * [Mod Menu](https://modrinth.com/mod/modmenu) (Recommended for accessing settings)
 3. **Download Mod**: Go to the [GitHub Releases](#) page and download the latest `.jar` file.
 4. **Install**: Drop the `.jar` files into your `.minecraft/mods` folder.
@@ -89,9 +89,11 @@ To change the settings:
 
 1. Open the Pause Menu or Main Menu.
 2. Click on the **Mods** button (requires Mod Menu).
-3. Search for **Screenshot Manager Enhanced** and click the **Config** button.
-4. **Global Settings**: default behavior for all worlds.
-5. **World Overrides**: Add specifics for your favorite servers or worlds *(Coming Soon)*.
+3. Search for **Screenshot Manager Enhanced** and click the **Config** button to open **SME Settings**:
+   * **Grouping Mode**: Pick your preferred folder organization mode with live example folder path previews.
+   * **Metadata**: Toggle **Embed Screenshot Metadata** to store world, biome, and coordinate XMP data in new screenshots.
+   * **Custom Save Location**: Enable and specify a custom writable directory (requires acknowledging the conflict warning).
+4. **World Overrides**: Customize specifics for your favorite servers or worlds *(Coming Soon)*.
 
 ## 🤝 Contributing
 
@@ -146,30 +148,27 @@ To build or run for a specific Minecraft version, pass the `-Pmc_ver` property:
 
 ## 🚀 Release Process
 
-Releases are automated via GitHub Actions. When you push a version tag, the workflow:
-
-1. Builds all supported Minecraft versions
-2. Publishes to **Modrinth** and **CurseForge**
-3. Creates a **GitHub Release** with attached JARs
-
-**Quick steps:**
+Releases use a guided two-phase Gradle workflow (`prepareRelease` and `publishRelease`) with dry-run and Modrinth sandbox support:
 
 ``` text
-┌─────────────────────────────────────────────────────────┐
-│                    RELEASE WORKFLOW                     │
-├─────────────────────────────────────────────────────────┤
-│  1. Update CHANGELOG.md with release notes              │
-│  2. Update mod_version in gradle.properties             │
-│  3. git checkout -b release/X.Y.Z                       │
-│  4. git add . && git commit -m "chore: release vX.Y.Z"  │
-│  5. Open a PR and merge the PR                          │
-│  6. git checkout main && git pull                       │
-│  7. git tag vX.Y.Z                                      │
-│  8. git push origin vX.Y.Z                              │
-│  9. ☕ Wait ~5-10 min for builds                         │
-│  10. Verify uploads on Modrinth + CurseForge            │
-│  11. Publish GitHub release draft (optional)            │
-└─────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│                  TWO-PHASE RELEASE WORKFLOW                  │
+├──────────────────────────────────────────────────────────────┤
+│  PHASE 1: PREPARATION                                        │
+│  1. ./gradlew prepareRelease                                 │
+│     - Detects version bump & synthesizes CHANGELOG.md        │
+│     - Creates release/vX.Y.Z branch & updates gradle.properties│
+│     - Pushes branch and opens a Pull Request targeting main  │
+│  2. Review and merge the Pull Request on GitHub              │
+│                                                              │
+│  PHASE 2: PUBLISHING (on main after merge)                   │
+│  3. git checkout main && git pull                            │
+│  4. ./gradlew publishRelease                                 │
+│     - Builds all MC versions (./gradlew buildAllFabric)      │
+│     - Creates & pushes git tag vX.Y.Z                        │
+│     - Creates GitHub Draft Release & uploads to Modrinth     │
+│     - Publishes the GitHub Release                           │
+└──────────────────────────────────────────────────────────────┘
 ```
 
 📖 **For full instructions**, see [RELEASE.md](RELEASE.md).
