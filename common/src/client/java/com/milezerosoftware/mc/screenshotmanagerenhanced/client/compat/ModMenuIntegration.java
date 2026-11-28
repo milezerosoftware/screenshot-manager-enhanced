@@ -87,10 +87,10 @@ public class ModMenuIntegration implements ModMenuApi {
 
         String displayBase = currentConfig.customSavePathEnabled ? initialCustomPath : "screenshots";
 
-        // Tab 1: Settings
-        ConfigCategory settingsCategory = ConfigCategory.createBuilder()
-                .name(Component.literal("Settings"))
-                .tooltip(Component.literal("General screenshot organization settings"))
+        // Single Category: SME Settings
+        ConfigCategory smeSettingsCategory = ConfigCategory.createBuilder()
+                .name(Component.literal("SME Settings"))
+                .tooltip(Component.literal("Screenshot Manager Enhanced settings"))
                 .option(Option.<GroupingMode>createBuilder()
                         .name(Component.literal("Grouping Mode").withStyle(ChatFormatting.GOLD))
                         .description(mode -> OptionDescription.of(
@@ -106,12 +106,6 @@ public class ModMenuIntegration implements ModMenuApi {
                                 .enumClass(GroupingMode.class)
                                 .formatValue(mode -> Component.literal(mode.toString())))
                         .build())
-                .build();
-
-        // Tab 2: Advanced
-        ConfigCategory advancedCategory = ConfigCategory.createBuilder()
-                .name(Component.literal("Advanced"))
-                .tooltip(Component.literal("Metadata embedding and custom save location settings"))
                 .group(OptionGroup.createBuilder()
                         .name(Component.literal("Metadata").withStyle(ChatFormatting.GOLD))
                         .description(OptionDescription.of(
@@ -177,8 +171,7 @@ public class ModMenuIntegration implements ModMenuApi {
 
         return YetAnotherConfigLib.createBuilder()
                 .title(Component.literal("Screenshot Manager Enhanced Settings"))
-                .category(settingsCategory)
-                .category(advancedCategory)
+                .category(smeSettingsCategory)
                 .save(() -> {
                     ConfigScreenLogic.SaveOutcome outcome = ConfigScreenLogic.applySaveState(
                             currentConfig,
