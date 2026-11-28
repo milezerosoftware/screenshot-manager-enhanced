@@ -2,16 +2,19 @@ package com.milezerosoftware.mc.screenshotmanagerenhanced.client.gui.screen;
 
 import com.milezerosoftware.mc.screenshotmanagerenhanced.client.render.ScreenshotTextureManager;
 import com.milezerosoftware.mc.screenshotmanagerenhanced.client.util.GalleryDirectoryScanner;
+import com.milezerosoftware.mc.screenshotmanagerenhanced.client.util.GalleryNavigation;
 import com.milezerosoftware.mc.screenshotmanagerenhanced.client.util.ScreenshotPathGenerator;
 import com.milezerosoftware.mc.screenshotmanagerenhanced.client.util.ScreenUtils;
 import com.milezerosoftware.mc.screenshotmanagerenhanced.client.util.WorldUtils;
 import com.milezerosoftware.mc.screenshotmanagerenhanced.config.ConfigManager;
 import com.milezerosoftware.mc.screenshotmanagerenhanced.config.ModConfig;
+import com.mojang.blaze3d.platform.InputConstants;
 import io.wispforest.owo.ui.base.BaseOwoScreen;
 import io.wispforest.owo.ui.component.ButtonComponent;
 import io.wispforest.owo.ui.component.LabelComponent;
 import io.wispforest.owo.ui.component.UIComponents;
 import io.wispforest.owo.ui.container.FlowLayout;
+import io.wispforest.owo.ui.container.ScrollContainer;
 import io.wispforest.owo.ui.container.UIContainers;
 import io.wispforest.owo.ui.core.CursorStyle;
 import io.wispforest.owo.ui.core.HorizontalAlignment;
@@ -22,8 +25,12 @@ import io.wispforest.owo.ui.core.Sizing;
 import io.wispforest.owo.ui.core.Surface;
 import io.wispforest.owo.ui.core.UIComponent;
 import io.wispforest.owo.ui.core.VerticalAlignment;
+import io.wispforest.owo.ui.inject.GreedyInputUIComponent;
+import io.wispforest.owo.ui.util.FocusHandler;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Util;
@@ -33,11 +40,16 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 public class GalleryScreen extends BaseOwoScreen<FlowLayout> {
     private static final int MAX_UPLOADS_PER_FRAME = 4;
+    private static final int SELECTION_BORDER_COLOR = 0xFFFFD700;
+    private static final int SELECTION_FILL_COLOR = 0x24FFFFFF;
+    private static final int SELECTION_BORDER_THICKNESS = 2;
 
     private Path currentDir;
     private final Path rootDir;
@@ -47,19 +59,31 @@ public class GalleryScreen extends BaseOwoScreen<FlowLayout> {
     private List<Path> currentDirs = List.of();
     private List<Path> currentImages = List.of();
     private int currentPage = 0;
+    private int selectedIndex = -1;
+    private final Map<Integer, UIComponent> pageCellComponents = new HashMap<>();
+    private ScrollContainer<FlowLayout> activeScroll = null;
+    private FlowLayout activeScrollContent = null;
+    private double keyboardScrollTarget = 0.0;
+    private boolean pendingScrollToSelected = false;
     private long refreshGeneration = 0;
     private long pageRenderGeneration = 0;
     private boolean navigatingToSingleView = false;
 
     public GalleryScreen(Screen parent) {
-        this(parent, null);
+        this(parent, null, -1);
     }
 
     public GalleryScreen(Screen parent, Path currentDir) {
+        this(parent, currentDir, -1);
+    }
+
+    public GalleryScreen(Screen parent, Path currentDir, int initialSelectedIndex) {
         this.parent = parent;
         Path defaultScreenshotsDir = Minecraft.getInstance().gameDirectory.toPath().resolve("screenshots");
         this.rootDir = GalleryDirectoryScanner.resolveRootDirectory(defaultScreenshotsDir, ConfigManager.getInstance());
         this.currentDir = (currentDir != null ? currentDir : resolveStartPath()).normalize();
+        this.selectedIndex = initialSelectedIndex >= 0 ? initialSelectedIndex : -1;
+        this.pendingScrollToSelected = this.selectedIndex >= 0;
     }
 
     private Path resolveStartPath() {
@@ -90,6 +114,9 @@ public class GalleryScreen extends BaseOwoScreen<FlowLayout> {
         // Using owo-lib's Surface callback keeps this cross-version compatible across MC 1.21.x and 26.x.
         root.surface((context, component) -> {
             ScreenshotTextureManager.drainPendingUploads(MAX_UPLOADS_PER_FRAME);
+            if (this.pendingScrollToSelected) {
+                tryScrollSelectedIntoView();
+            }
             Surface.VANILLA_TRANSLUCENT.draw(context, component);
         });
         root.horizontalAlignment(HorizontalAlignment.CENTER);
@@ -113,6 +140,8 @@ public class GalleryScreen extends BaseOwoScreen<FlowLayout> {
             if (parentPath != null && parentPath.startsWith(rootDir)) {
                 currentDir = parentPath;
                 currentPage = 0;
+                selectedIndex = -1;
+                pendingScrollToSelected = false;
                 refresh(root);
             }
         }).id("up-button").sizing(Sizing.fixed(20)));
@@ -130,7 +159,12 @@ public class GalleryScreen extends BaseOwoScreen<FlowLayout> {
             cycleGridSize(b);
             ScreenshotTextureManager.cancelPending();
             int pageSize = GalleryDirectoryScanner.pageSizeForColumns(columns);
-            currentPage = GalleryDirectoryScanner.clampPage(currentPage, currentImages.size(), pageSize);
+            if (selectedIndex >= 0 && selectedIndex < currentImages.size()) {
+                currentPage = GalleryNavigation.pageForIndex(selectedIndex, pageSize);
+                pendingScrollToSelected = true;
+            } else {
+                currentPage = GalleryDirectoryScanner.clampPage(currentPage, currentImages.size(), pageSize);
+            }
             renderCurrentPage(root);
         }).id("grid-toggle");
         topRight.margins(Insets.right(0));
@@ -166,11 +200,7 @@ public class GalleryScreen extends BaseOwoScreen<FlowLayout> {
         paginationBar.gap(6);
 
         var prevPageBtn = UIComponents.button(Component.literal("< Prev"), b -> {
-            if (currentPage > 0) {
-                currentPage--;
-                ScreenshotTextureManager.cancelPending();
-                renderCurrentPage(root);
-            }
+            navigatePageBy(root, -1);
         });
         prevPageBtn.id("prev-page-button");
         prevPageBtn.sizing(Sizing.fixed(50), Sizing.fixed(20));
@@ -182,13 +212,7 @@ public class GalleryScreen extends BaseOwoScreen<FlowLayout> {
         paginationBar.child(pageLabel);
 
         var nextPageBtn = UIComponents.button(Component.literal("Next >"), b -> {
-            int pageSize = GalleryDirectoryScanner.pageSizeForColumns(columns);
-            int totalPages = GalleryDirectoryScanner.getTotalPages(currentImages.size(), pageSize);
-            if (currentPage < totalPages - 1) {
-                currentPage++;
-                ScreenshotTextureManager.cancelPending();
-                renderCurrentPage(root);
-            }
+            navigatePageBy(root, 1);
         });
         nextPageBtn.id("next-page-button");
         nextPageBtn.sizing(Sizing.fixed(50), Sizing.fixed(20));
@@ -251,6 +275,7 @@ public class GalleryScreen extends BaseOwoScreen<FlowLayout> {
 
         pathLabel.text(Component.literal("Folder: " + displayPath));
         contentContainer.clearChildren();
+        clearDismountedFocus();
         contentContainer.child(UIComponents.label(Component.literal("Loading...")));
 
         long generation = ++this.refreshGeneration;
@@ -274,6 +299,7 @@ public class GalleryScreen extends BaseOwoScreen<FlowLayout> {
 
             if (result == null) {
                 contentContainer.clearChildren();
+                clearDismountedFocus();
                 contentContainer.child(UIComponents.label(Component.literal("Error loading files")));
                 return;
             }
@@ -281,7 +307,13 @@ public class GalleryScreen extends BaseOwoScreen<FlowLayout> {
             this.currentDirs = result.directories();
             this.currentImages = result.imagePaths();
             int pageSize = GalleryDirectoryScanner.pageSizeForColumns(columns);
-            this.currentPage = GalleryDirectoryScanner.clampPage(this.currentPage, this.currentImages.size(), pageSize);
+            this.selectedIndex = GalleryNavigation.clampSelection(this.selectedIndex, this.currentImages.size());
+            if (this.selectedIndex >= 0) {
+                this.currentPage = GalleryNavigation.pageForIndex(this.selectedIndex, pageSize);
+                this.pendingScrollToSelected = true;
+            } else {
+                this.currentPage = GalleryDirectoryScanner.clampPage(this.currentPage, this.currentImages.size(), pageSize);
+            }
 
             renderCurrentPage(root);
         }, Minecraft.getInstance()); // Execute on Main Thread
@@ -293,6 +325,10 @@ public class GalleryScreen extends BaseOwoScreen<FlowLayout> {
             return;
 
         long renderGen = ++this.pageRenderGeneration;
+        this.pageCellComponents.clear();
+        this.activeScroll = null;
+        this.activeScrollContent = null;
+        this.keyboardScrollTarget = 0.0;
 
         int pageSize = GalleryDirectoryScanner.pageSizeForColumns(columns);
         int totalImages = currentImages.size();
@@ -302,6 +338,7 @@ public class GalleryScreen extends BaseOwoScreen<FlowLayout> {
         updatePaginationControls(root, totalPages, totalImages);
 
         contentContainer.clearChildren();
+        clearDismountedFocus();
 
         var scrollContent = UIContainers.verticalFlow(Sizing.fill(100), Sizing.content());
         scrollContent.gap(0);
@@ -359,6 +396,7 @@ public class GalleryScreen extends BaseOwoScreen<FlowLayout> {
                 int globalIndex = pageStartIndex + i;
                 var cell = createImageUI(currentImages, globalIndex, columns, cellWidth, cellHeight, renderGen);
                 cell.margins(Insets.of(halfSpacing));
+                this.pageCellComponents.put(globalIndex, cell);
                 grid.child(cell, i / columns, i % columns);
             }
 
@@ -373,7 +411,19 @@ public class GalleryScreen extends BaseOwoScreen<FlowLayout> {
             scrollContent.child(grid);
         }
 
+        scrollContent.mouseScroll().subscribe((mouseX, mouseY, amount) -> {
+            this.keyboardScrollTarget = -1.0;
+            return false;
+        });
+
         var scroll = UIContainers.verticalScroll(Sizing.fill(100), Sizing.fill(100), scrollContent);
+        scroll.id("gallery-scroll");
+        scroll.mouseDown().subscribe((click, doubled) -> {
+            this.keyboardScrollTarget = -1.0;
+            return false;
+        });
+        this.activeScroll = scroll;
+        this.activeScrollContent = scrollContent;
         contentContainer.child(scroll);
     }
 
@@ -410,6 +460,8 @@ public class GalleryScreen extends BaseOwoScreen<FlowLayout> {
         return UIComponents.button(Component.literal("\uD83D\uDCC1 " + name), b -> {
             this.currentDir = path;
             this.currentPage = 0;
+            this.selectedIndex = -1;
+            this.pendingScrollToSelected = false;
             refresh((FlowLayout) this.uiAdapter.rootComponent);
         }).sizing(Sizing.fixed(width), Sizing.fixed(20))
                 .margins(Insets.of(2))
@@ -469,21 +521,32 @@ public class GalleryScreen extends BaseOwoScreen<FlowLayout> {
         label.margins(Insets.top(2));
         content.child(label);
 
-        // Click Layer (Invisible Button)
-        var button = UIComponents.button(Component.empty(), b -> {
-            this.navigatingToSingleView = true;
-            ScreenUtils.setScreen(new SingleImageScreen(this.parent, images, index, this.currentDir));
-        });
+        // Click Layer (Invisible Button excluded from keyboard Tab cycle so only toolbar/folder buttons participate)
+        var button = new ButtonComponent(Component.empty(), b -> {
+            this.selectedIndex = index;
+            openSingleImage(images, index);
+        }) {
+            @Override
+            public boolean canFocus(FocusSource source) {
+                return source != FocusSource.KEYBOARD_CYCLE;
+            }
+        };
         button.sizing(Sizing.fill(100), Sizing.fill(100));
 
         final boolean[] hovered = {false};
         button.mouseEnter().subscribe(() -> hovered[0] = true);
         button.mouseLeave().subscribe(() -> hovered[0] = false);
 
-        // Transparent background
+        // Transparent background with distinct selection highlight and hover outline
         button.renderer((context, btn, delta) -> {
-            // Draw outline if hovered
-            if (hovered[0]) {
+            if (index == this.selectedIndex) {
+                context.fill(btn.x(), btn.y(), btn.x() + btn.width(), btn.y() + btn.height(), SELECTION_FILL_COLOR);
+                int border = SELECTION_BORDER_THICKNESS;
+                context.fill(btn.x(), btn.y(), btn.x() + btn.width(), btn.y() + border, SELECTION_BORDER_COLOR); // Top
+                context.fill(btn.x(), btn.y() + btn.height() - border, btn.x() + btn.width(), btn.y() + btn.height(), SELECTION_BORDER_COLOR); // Bottom
+                context.fill(btn.x(), btn.y(), btn.x() + border, btn.y() + btn.height(), SELECTION_BORDER_COLOR); // Left
+                context.fill(btn.x() + btn.width() - border, btn.y(), btn.x() + btn.width(), btn.y() + btn.height(), SELECTION_BORDER_COLOR); // Right
+            } else if (hovered[0]) {
                 int color = 0xFFFFFFFF;
                 context.fill(btn.x(), btn.y(), btn.x() + btn.width(), btn.y() + 1, color); // Top
                 context.fill(btn.x(), btn.y() + btn.height() - 1, btn.x() + btn.width(), btn.y() + btn.height(), color); // Bottom
@@ -508,6 +571,186 @@ public class GalleryScreen extends BaseOwoScreen<FlowLayout> {
         return stack;
     }
 
+    private void openSingleImage(List<Path> images, int index) {
+        if (images == null || index < 0 || index >= images.size()) {
+            return;
+        }
+        this.navigatingToSingleView = true;
+        ScreenUtils.setScreen(new SingleImageScreen(this.parent, images, index, this.currentDir));
+    }
+
+    private void navigatePageBy(FlowLayout root, int delta) {
+        if (currentImages.isEmpty()) {
+            return;
+        }
+        int pageSize = GalleryDirectoryScanner.pageSizeForColumns(columns);
+        if (selectedIndex >= 0) {
+            var move = GalleryNavigation.movePage(currentPage, selectedIndex, delta, currentImages.size(), pageSize);
+            if (move.pageChanged() || move.selectedIndex() != selectedIndex) {
+                applyGridMove(move);
+            }
+        } else {
+            int targetPage = GalleryDirectoryScanner.clampPage(currentPage + delta, currentImages.size(), pageSize);
+            if (targetPage != currentPage) {
+                currentPage = targetPage;
+                ScreenshotTextureManager.cancelPending();
+                renderCurrentPage(root);
+            }
+        }
+    }
+
+    private void applyGridMove(GalleryNavigation.GridMoveResult move) {
+        this.selectedIndex = move.selectedIndex();
+        if (move.pageChanged()) {
+            this.currentPage = move.page();
+            ScreenshotTextureManager.cancelPending();
+            this.pendingScrollToSelected = true;
+            if (this.uiAdapter != null) {
+                renderCurrentPage(this.uiAdapter.rootComponent);
+            }
+        } else {
+            ensureSelectedVisible();
+        }
+    }
+
+    private void ensureSelectedVisible() {
+        this.pendingScrollToSelected = true;
+        tryScrollSelectedIntoView();
+    }
+
+    private void tryScrollSelectedIntoView() {
+        if (this.selectedIndex < 0 || this.activeScroll == null || this.activeScrollContent == null) {
+            this.pendingScrollToSelected = false;
+            return;
+        }
+        UIComponent cell = this.pageCellComponents.get(this.selectedIndex);
+        if (cell == null) {
+            this.pendingScrollToSelected = false;
+            return;
+        }
+        if (cell.height() <= 0 || this.activeScroll.height() <= 0 || this.activeScrollContent.height() <= 0) {
+            return; // Wait until layout pass assigns bounds
+        }
+        this.pendingScrollToSelected = false;
+
+        Insets scrollPadding = this.activeScroll.padding().get();
+        Insets contentMargins = this.activeScrollContent.margins().get();
+        Insets cellMargins = cell.margins().get();
+
+        int viewportHeight = this.activeScroll.height() - scrollPadding.vertical();
+        int maxScroll = Math.max(0, this.activeScrollContent.height() - viewportHeight);
+        if (maxScroll <= 0) {
+            this.keyboardScrollTarget = 0.0;
+            return;
+        }
+
+        int itemTop = cell.y() - this.activeScrollContent.y() - cellMargins.top();
+        int itemBottom = itemTop + cell.height() + cellMargins.vertical();
+
+        boolean hadKeyboardTarget = this.keyboardScrollTarget >= 0.0;
+        double currentOffset = hadKeyboardTarget
+                ? this.keyboardScrollTarget
+                : (this.activeScroll.y() + scrollPadding.top() + contentMargins.top()) - this.activeScrollContent.y();
+
+        double targetOffset = GalleryNavigation.computeTargetScrollOffset(
+                itemTop, itemBottom, currentOffset, viewportHeight, maxScroll);
+        if (Math.abs(targetOffset - currentOffset) > 1e-6) {
+            this.keyboardScrollTarget = targetOffset;
+            double progress = Math.max(0.0, Math.min(1.0, targetOffset / maxScroll));
+            this.activeScroll.scrollTo(progress);
+        } else if (hadKeyboardTarget) {
+            this.keyboardScrollTarget = targetOffset;
+        }
+    }
+
+    private void clearDismountedFocus() {
+        if (this.uiAdapter == null) {
+            return;
+        }
+        FocusHandler focusHandler = this.uiAdapter.rootComponent.focusHandler();
+        if (focusHandler != null && focusHandler.focused() != null && !focusHandler.focused().hasParent()) {
+            focusHandler.focus(null, null);
+        }
+    }
+
+    private boolean isNonImageButtonKeyboardFocused(FocusHandler focusHandler) {
+        if (focusHandler == null) {
+            return false;
+        }
+        return focusHandler.focused() instanceof ButtonComponent btn
+                && btn.active
+                && btn.hasParent()
+                && focusHandler.lastFocusSource() == UIComponent.FocusSource.KEYBOARD_CYCLE;
+    }
+
+    @Override
+    public boolean mouseDragged(MouseButtonEvent click, double deltaX, double deltaY) {
+        this.keyboardScrollTarget = -1.0;
+        return super.mouseDragged(click, deltaX, deltaY);
+    }
+
+    @Override
+    public boolean keyPressed(KeyEvent input) {
+        if (this.uiAdapter == null) {
+            return super.keyPressed(input);
+        }
+
+        FocusHandler focusHandler = this.uiAdapter.rootComponent.focusHandler();
+        UIComponent focused = focusHandler != null ? focusHandler.focused() : null;
+        if (focused instanceof GreedyInputUIComponent || input.hasControlDown() || input.hasAltDown()) {
+            return super.keyPressed(input);
+        }
+
+        GalleryNavigation.Direction direction = null;
+        if (input.isLeft()) {
+            direction = GalleryNavigation.Direction.LEFT;
+        } else if (input.isRight()) {
+            direction = GalleryNavigation.Direction.RIGHT;
+        } else if (input.isUp()) {
+            direction = GalleryNavigation.Direction.UP;
+        } else if (input.isDown()) {
+            direction = GalleryNavigation.Direction.DOWN;
+        }
+
+        if (direction != null) {
+            if (focusHandler != null) {
+                focusHandler.focus(null, null);
+            }
+            if (!currentImages.isEmpty()) {
+                int pageSize = GalleryDirectoryScanner.pageSizeForColumns(columns);
+                var move = GalleryNavigation.moveGridSelection(
+                        selectedIndex, currentPage, direction, currentImages.size(), columns, pageSize);
+                applyGridMove(move);
+            }
+            return true;
+        }
+
+        int keyCode = input.key();
+        if (keyCode == InputConstants.KEY_PAGEUP || keyCode == InputConstants.KEY_PAGEDOWN) {
+            if (focusHandler != null) {
+                focusHandler.focus(null, null);
+            }
+            if (!currentImages.isEmpty()) {
+                int delta = keyCode == InputConstants.KEY_PAGEUP ? -1 : 1;
+                int pageSize = GalleryDirectoryScanner.pageSizeForColumns(columns);
+                var move = GalleryNavigation.movePage(
+                        currentPage, selectedIndex, delta, currentImages.size(), pageSize);
+                applyGridMove(move);
+            }
+            return true;
+        }
+
+        if ((keyCode == InputConstants.KEY_RETURN || keyCode == InputConstants.KEY_NUMPADENTER)
+                && !isNonImageButtonKeyboardFocused(focusHandler)
+                && selectedIndex >= 0
+                && selectedIndex < currentImages.size()) {
+            openSingleImage(currentImages, selectedIndex);
+            return true;
+        }
+
+        return super.keyPressed(input);
+    }
+
     @Override
     public void onClose() {
         if (parent != null) {
@@ -522,6 +765,11 @@ public class GalleryScreen extends BaseOwoScreen<FlowLayout> {
         super.removed();
         this.refreshGeneration++;
         this.pageRenderGeneration++;
+        this.pageCellComponents.clear();
+        this.activeScroll = null;
+        this.activeScrollContent = null;
+        this.keyboardScrollTarget = 0.0;
+        this.pendingScrollToSelected = false;
         this.uiAdapter = null; // Force rebuild on next init to reload textures
         if (this.navigatingToSingleView) {
             this.navigatingToSingleView = false;
